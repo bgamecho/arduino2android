@@ -5,18 +5,59 @@
     android:orientation="vertical"
     tools:context="${packageName}.${activityClass}" >
 
+    <Button
+        android:id="@+id/buttonRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Refresh device list" />
+
     <Spinner
         android:id="@+id/spinnerBluetooth"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <Button
-        android:id="@+id/buttonConnect"
+    <LinearLayout
+        android:id="@+id/m_buttonsLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/textView1"
-        android:text="Connect to arduino" />
+        android:orientation="horizontal" >
+
+        <Button
+            android:id="@+id/buttonConnect"
+            android:layout_weight="1"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Connect" />
+
+        <Button
+            android:id="@+id/buttonDisconnect"
+            android:layout_weight="1"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Disconnect" />
+    </LinearLayout>
     
+        <LinearLayout
+        android:id="@+id/m_commandsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <Button
+            android:id="@+id/buttonStart"
+            android:layout_weight="1"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="command s" />
+
+        <Button
+            android:id="@+id/buttonFin"
+            android:layout_weight="1"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="command f" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/buttonLedOn"
         android:layout_width="match_parent"
@@ -27,25 +68,31 @@
         android:text="Switch led" />
 
     <LinearLayout
+        android:id="@+id/m_LDRvaluesLayout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
+        android:layout_height="wrap_content"
+        android:orientation="vertical" >
 
-        <TextView
-            android:id="@+id/textViewSensorLabel"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/sensorLabel"
-            android:textSize="20sp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" >
 
-        <TextView
-            android:id="@+id/textViewLDRvalue"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="0"
-            android:textSize="20sp" />
+            <TextView
+                android:id="@+id/textViewSensorLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sensorLabel"
+                android:textSize="20sp" />
 
+            <TextView
+                android:id="@+id/textViewLDRvalue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="0"
+                android:textSize="20sp" />
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>

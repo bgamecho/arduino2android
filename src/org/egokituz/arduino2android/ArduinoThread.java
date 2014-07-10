@@ -1,6 +1,5 @@
 package org.egokituz.arduino2android;
 
-
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -18,22 +17,21 @@ public class ArduinoThread extends BTDeviceThread{
 
 	public final static String TAG ="ArduinoThread";
 	ArrayList<String> commandArray;
-	
+
 	public String recvLine;
-	
+
 	public ArduinoThread(Handler myHandler, String remoteAddress) throws Exception{
-		
+
 		super(myHandler);
 
 		this.setName("ArduinoThread");
-		
+
 		commandArray = new ArrayList<String>();
-		
+
 		super.setupBT(remoteAddress);
-		super.initComm();
+		//super.initComm();
+		super.initComm2();
 		super.sendMessage("OK", "Connected to Arduino device at: "+_bluetoothDev.getAddress());
-	
-		
 	}
 
 	@Override
@@ -41,12 +39,9 @@ public class ArduinoThread extends BTDeviceThread{
 		recvLine = "";
 	}
 
-	
 	@Override
 	public void loop() {
-	
 		synchronized(this){
-
 			if(!commandArray.isEmpty()){
 				String currentCommand = null;		
 				currentCommand = commandArray.get(0);	
@@ -54,11 +49,9 @@ public class ArduinoThread extends BTDeviceThread{
 
 				byte[] buffer = new byte[1];
 				try {
-
 					buffer[0]= (byte) currentCommand.charAt(0);
 					Log.v(TAG, "Data to send: "+buffer[0]);
 					_outStream.write(buffer);
-
 				} catch (IOException e) {
 					Log.e(TAG, "Exception writting to the Arduino socket");
 					e.printStackTrace();
@@ -74,27 +67,22 @@ public class ArduinoThread extends BTDeviceThread{
 					Log.e(TAG, "Error waiting in the loop of the robot");
 					e.printStackTrace();
 				}
-
 			}
-			
 
 			byte[] buffer = new byte[10];
 			try {
 				_inStream.read(buffer);
 				for(byte aux : buffer){
 					if((char) aux == '\n' ){
-				//		Log.v(TAG, recvLine);
+						Log.v(TAG, recvLine);
 						String[] parts = recvLine.split("LDR:");
-				//		Log.v(TAG, parts[1]);
+						Log.v(TAG, parts[1]);
 						this.sendMessage("LDR_data", parts[1]);
 						recvLine = "";
 					}else{
 						recvLine += (char) aux;
 					}
-					
 				}
-					
-				
 			} catch (IOException e) {
 				Log.e(TAG, "IOException reading socket");
 				e.printStackTrace();
@@ -102,10 +90,7 @@ public class ArduinoThread extends BTDeviceThread{
 				Log.e(TAG, "other exception");
 				e.printStackTrace();
 			}
-			
-
 		}// end the synchronized code
-
 	}
 
 	/**
