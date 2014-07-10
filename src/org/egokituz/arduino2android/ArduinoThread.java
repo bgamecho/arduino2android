@@ -16,7 +16,7 @@ import android.util.Log;
 public class ArduinoThread extends BTDeviceThread{
 
 	public final static String TAG ="ArduinoThread";
-	ArrayList<String> commandArray;
+
 
 	public String recvLine;
 
@@ -26,10 +26,9 @@ public class ArduinoThread extends BTDeviceThread{
 
 		this.setName("ArduinoThread");
 
-		commandArray = new ArrayList<String>();
-
 		super.setupBT(remoteAddress);
 		//super.initComm();
+		//super.initComm2();
 		super.initComm2();
 		super.sendMessage("OK", "Connected to Arduino device at: "+_bluetoothDev.getAddress());
 	}
@@ -39,43 +38,22 @@ public class ArduinoThread extends BTDeviceThread{
 		recvLine = "";
 	}
 
+
+	byte[] buffer = new byte[1024];
+	int bytes;
+	String currentCommand;
+
 	@Override
 	public void loop() {
 		synchronized(this){
-			if(!commandArray.isEmpty()){
-				String currentCommand = null;		
-				currentCommand = commandArray.get(0);	
-				commandArray.remove(0);
-
-				byte[] buffer = new byte[1];
-				try {
-					buffer[0]= (byte) currentCommand.charAt(0);
-					Log.v(TAG, "Data to send: "+buffer[0]);
-					_outStream.write(buffer);
-				} catch (IOException e) {
-					Log.e(TAG, "Exception writting to the Arduino socket");
-					e.printStackTrace();
-				} catch (Exception e) {
-					Log.e(TAG, "General exception in the run() method");
-					e.printStackTrace();
-				}
-
-				// Delay time between commands
-				try {
-					Thread.sleep(10);
-				} catch (InterruptedException e) {
-					Log.e(TAG, "Error waiting in the loop of the robot");
-					e.printStackTrace();
-				}
-			}
-
-			byte[] buffer = new byte[10];
 			try {
-				_inStream.read(buffer);
+				bytes = _inStream.read(buffer);
+				//myHandler.obtainMessage(MainActivity.MESSAGE_READ, bytes, -1, buffer).sendToTarget();
+				/*
 				for(byte aux : buffer){
 					if((char) aux == '\n' ){
 						Log.v(TAG, recvLine);
-						String[] parts = recvLine.split("LDR:");
+						String[] parts = recvLine.split("msg:");
 						Log.v(TAG, parts[1]);
 						this.sendMessage("LDR_data", parts[1]);
 						recvLine = "";
@@ -83,6 +61,7 @@ public class ArduinoThread extends BTDeviceThread{
 						recvLine += (char) aux;
 					}
 				}
+				 */
 			} catch (IOException e) {
 				Log.e(TAG, "IOException reading socket");
 				e.printStackTrace();
@@ -104,7 +83,8 @@ public class ArduinoThread extends BTDeviceThread{
 			if(myBundle.containsKey("COMMAND")){
 				String cmd = myBundle.getString("COMMAND");
 				synchronized(this){	
-					commandArray.add(cmd);
+					//commandArray.add(cmd);
+					write(cmd);
 				}
 			}
 		}
@@ -117,5 +97,30 @@ public class ArduinoThread extends BTDeviceThread{
 	public Handler getHandler(){
 		return arduinoHandler;
 	}
+
+	protected void write(String cmd) {
+
+		buffer = cmd.getBytes();
+		try {
+			//buffer[0]= (byte) currentCommand.charAt(0);
+			Log.v(TAG, "Data to send: "+buffer[0]);
+			_outStream.write(buffer);
+		} catch (IOException e) {
+			Log.e(TAG, "Exception writting to the Arduino socket");
+			e.printStackTrace();
+		} catch (Exception e) {
+			Log.e(TAG, "General exception in the run() method");
+			e.printStackTrace();
+		}
+
+		// Delay time between commands
+		try {
+			Thread.sleep(10);
+		} catch (InterruptedException e) {
+			Log.e(TAG, "Error waiting in the loop of the robot");
+			e.printStackTrace();
+		}
+	}
+
 
 }
