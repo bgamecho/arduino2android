@@ -36,7 +36,8 @@ public class BTManagerThread extends Thread{
 
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	private static final int REQUEST_ENABLE_BT = 1;
-	public static final int MESSAGE_BT_THREAD = 2;
+	public static final int MESSAGE_BT_THREAD_CREATED = 2;
+	public static final int MESSAGE_SEND_COMMAND = 3;
 
 	private Handler mainHandler;
 	private Context mainCtx;
@@ -106,7 +107,8 @@ public class BTManagerThread extends Thread{
 			case BluetoothDevice.ACTION_FOUND:
 				//TODO When discovery finds a device
 				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				newDevicesList.add(device);
+				if(newDevicesList.contains(device))
+					newDevicesList.add(device);
 
 				break;
 			case BluetoothDevice.ACTION_ACL_CONNECTED:
@@ -153,7 +155,7 @@ public class BTManagerThread extends Thread{
 
 					break;
 				case BluetoothAdapter.STATE_TURNING_ON:
-					//TODO
+					//TODO check if this is necessary
 					Log.v(TAG, "Bluetooth is turning on");
 
 					break;
@@ -175,13 +177,28 @@ public class BTManagerThread extends Thread{
 		@Override
 		public void handleMessage(Message msg) {
 			switch (msg.what) {
-			case MESSAGE_BT_THREAD:
+			case MESSAGE_BT_THREAD_CREATED:
 				ArduinoThread aux = (ArduinoThread) msg.obj;
-				String devName = aux.get_bluetoothDev().getName();
+				String devName = aux.getBluetoothDeviceName().getName();
 				myArduinoThreads.put(devName, aux);
 				Log.v(TAG, "Thread was successfully created");
 				break;
-
+			case MESSAGE_SEND_COMMAND:
+				Bundle mBundle = msg.getData();
+				String command = mBundle.getString("COMMAND");
+				String MAC =  mBundle.getString("MAC");
+				
+				for(BTDeviceThread th : myArduinoThreads.values()){
+					if(th.getDeviceMAC().equals(MAC)){
+						Message sendMsg = new Message();
+						Bundle myDataBundle = new Bundle();
+						myDataBundle.putString("COMMAND", command);
+						sendMsg.setData(myDataBundle);
+						// Obtain the handler from the Thread and send the command in a Bundle
+						((ArduinoThread) th).getHandler().sendMessage(sendMsg);
+					}
+				}
+				
 			default:
 				break;
 			}
@@ -268,6 +285,7 @@ public class BTManagerThread extends Thread{
 
 	private boolean stop_discovery;
 	private boolean exit_condition;
+	private boolean firstDiscovery = true;
 
 	class Discovery extends Thread {
 		BTManagerThread BTmgr;
@@ -324,14 +342,16 @@ public class BTManagerThread extends Thread{
 			boolean result = false;
 			newDevicesList.clear();	//TODO Check if this clear() is really necessary
 
-			// 0. Get bonded devices 
-			Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
-			newDevicesList.addAll(bondedDevices);
+			// 0. Get bonded devices (only the first time) 
+			if(firstDiscovery){
+				Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
+				newDevicesList.addAll(bondedDevices);
+				firstDiscovery = false;
+			}
 
-			// 1. Check if previously bonded devices are no longer bonded (in which case, discard them)
-			//TODO
+			//TODO 1. Check if previously bonded devices are no longer bonded (in which case, discard them)
 
-			// 2. Discover new devices
+			// 2. Discover devices (new devices are stored in the newDevicesList
 			_BluetoothAdapter.startDiscovery();	// updates newDevicesList
 			while(_BluetoothAdapter.isDiscovering()){
 			}
@@ -347,8 +367,8 @@ public class BTManagerThread extends Thread{
 
 					if(deviceName.contains("ROBOTICA_") || deviceName.contains("BT-SENSOR_")){
 
-						// If the Arduino is not already paired or ignored
-						if(!myArduinoThreads.containsKey(deviceName) && !ignoredDevicesList.containsKey(deviceName)){
+						// Discard devices that are already connected, ignored or due for connection 
+						if(!myArduinoThreads.containsKey(deviceName) && !ignoredDevicesList.containsKey(deviceName) && !connectableArduinos.containsKey(deviceName)){
 							connectableArduinos.put(deviceName,device);
 						}
 					}
@@ -363,8 +383,6 @@ public class BTManagerThread extends Thread{
 				result = true;
 				for(BluetoothDevice arduino: connectableArduinos.values()){
 					mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
-		        	
-					
 				}
 			}else{
 				Log.v(TAG, "There isn't any new arduino");

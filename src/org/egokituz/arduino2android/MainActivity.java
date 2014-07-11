@@ -169,7 +169,8 @@ public class MainActivity extends Activity {
 	@Override 
 	public void onStart(){
 		Log.v(TAG, "Arduino Activity --OnStart()--");
-		myBTManagerThread.start();
+		if(!myBTManagerThread.isAlive())
+			myBTManagerThread.start();
 		super.onStart();
 	}
 
@@ -318,7 +319,9 @@ public class MainActivity extends Activity {
 			Message sendMsg = new Message();
 			Bundle myDataBundle = new Bundle();
 			myDataBundle.putString("COMMAND", str);
+			myDataBundle.putString("MAC", selected_arduinoMAC);
 			sendMsg.setData(myDataBundle);
+			sendMsg.what = BTManagerThread.MESSAGE_SEND_COMMAND;
 			//			try {
 			//				Thread.sleep(50);
 			//			} catch (InterruptedException e) {
@@ -328,7 +331,7 @@ public class MainActivity extends Activity {
 			// Obtain the handler from the Thread and send the command in a Bundle
 			myBTManagerThread.btHandler.sendMessage(sendMsg);
 			//arduino.getHandler().sendMessage(sendMsg);
-			Log.v(TAG, "Command "+str+" sent");
+			//Log.v(TAG, "Command "+str+" sent");
 
 		}
 
@@ -411,6 +414,9 @@ public class MainActivity extends Activity {
 			case MESSAGE_CONNECT_ARDUINO:
 				ArduinoThread _newArduinoThread = null;
 				BluetoothDevice newDevice = (BluetoothDevice) msg.obj;
+				
+				//TODO check that there is no other thread connected with this device
+				
 				try {
 					_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
 					_newArduinoThread.start();
@@ -418,7 +424,7 @@ public class MainActivity extends Activity {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD, _newArduinoThread).sendToTarget();
+				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
 				//_newArduino.initComm2();
 			}
 		}

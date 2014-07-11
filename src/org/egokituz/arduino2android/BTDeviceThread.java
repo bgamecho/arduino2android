@@ -32,11 +32,17 @@ public abstract class BTDeviceThread extends Thread {
 
 	Handler myHandler;
 
-	// Adapter for the local Bluetooth adapter (the device's actual antenna)
+
 	public BluetoothDevice _bluetoothDev = null;
 
-	public BluetoothDevice get_bluetoothDev() {
+	public BluetoothDevice getBluetoothDeviceName() {
 		return _bluetoothDev;
+	}
+	public String getDeviceName() {
+		return _bluetoothDev.getName();
+	}
+	public String getDeviceMAC(){
+		return _bluetoothDev.getAddress();
 	}
 
 	public BluetoothSocket _socket = null;
