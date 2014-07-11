@@ -38,8 +38,15 @@ public class MainActivity extends Activity {
 
 	public final static String TAG = "ArduinoActivity";
 
+	public static final int MESSAGE_TOAST = 0;
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	private static final int REQUEST_ENABLE_BT = 1;
+	public static final int MESSAGE_READ = 2;
+	public static final int MESSAGE_CONNECT_ARDUINO = 3;
+
+	public static final String TOAST = "toast";
+
+
 
 	Button refreshButton, connectButton, disconnectButton,startButton,finButton;
 	Spinner spinnerBluetooth;
@@ -47,9 +54,9 @@ public class MainActivity extends Activity {
 	TextView tvLdr;
 
 	private String selected_arduinoMAC;
-	
+
 	private BTManagerThread myBTManagerThread;
-	
+
 	private ArduinoThread arduino;
 	boolean ardionoOn;
 
@@ -62,9 +69,11 @@ public class MainActivity extends Activity {
 
 		ardionoOn = false;
 		finishApp = false;
-		
+
 		setButtons();
 		updateSpinner();
+		
+		myBTManagerThread = new BTManagerThread(this, arduinoHandler);
 
 	}
 
@@ -111,37 +120,37 @@ public class MainActivity extends Activity {
 
 			@Override
 			public void onClick(View v) {
-				connectToArduino();
+				//connectToArduino();
 			}
 		});
-		
+
 		disconnectButton = (Button) findViewById(R.id.buttonDisconnect);
 		disconnectButton.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
-				disconnectAduino();
+				//disconnectAduino();
 			}
 		});
-		
+
 		startButton = (Button) findViewById(R.id.buttonStart);
 		startButton.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
 				startCommand();
 			}
 		});
-		
+
 		finButton =(Button) findViewById(R.id.buttonFin);
 		finButton.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
 				finalizeCommand();
 			}
 		});
-		
+
 		ledOn = (Button) findViewById(R.id.buttonLedOn);
 		ledOn.setOnClickListener(
 				new OnClickListener() {
@@ -160,6 +169,7 @@ public class MainActivity extends Activity {
 	@Override 
 	public void onStart(){
 		Log.v(TAG, "Arduino Activity --OnStart()--");
+		myBTManagerThread.start();
 		super.onStart();
 	}
 
@@ -229,7 +239,7 @@ public class MainActivity extends Activity {
 	//Updates the items of the Bluetooth devices' spinner
 	private void updateSpinner(){
 		String[] myDeviceList = this.getBluetoothDevices();
-		
+
 		for(int i=0;i<myDeviceList.length; i++){
 			if(!myDeviceList[i].startsWith("BT-") || !myDeviceList[i].startsWith("ROB") )
 				myDeviceList[i].length();
@@ -269,21 +279,23 @@ public class MainActivity extends Activity {
 	public void disconnectAduino(){
 		//sendCommandArduino("f");
 
-		
 		new Handler().postDelayed(new Runnable(){
 			public void run() {
-				arduino.finalizeThread();
+
+				//If an arduino thread is running, finalize it
+				if(arduino!=null)
+					arduino.finalizeThread();
 				/*
 				new Handler().postDelayed(new Runnable(){
 					public void run() {
-						finish();
+						finish(); //Finnish whole app
 					}                   
 				}, 1000);
-				*/
+				 */
 			}                   
 		}, 1000);
 	}
-	
+
 	public void startCommand(){
 		sendCommandArduino("s");
 	}
@@ -302,7 +314,7 @@ public class MainActivity extends Activity {
 	 */
 	public void sendCommandArduino(String str) {
 
-		if(ardionoOn){
+		if(selected_arduinoMAC != null){
 			Message sendMsg = new Message();
 			Bundle myDataBundle = new Bundle();
 			myDataBundle.putString("COMMAND", str);
@@ -314,7 +326,8 @@ public class MainActivity extends Activity {
 			//				e.printStackTrace();
 			//			}
 			// Obtain the handler from the Thread and send the command in a Bundle
-			arduino.getHandler().sendMessage(sendMsg);
+			myBTManagerThread.btHandler.sendMessage(sendMsg);
+			//arduino.getHandler().sendMessage(sendMsg);
 			Log.v(TAG, "Command "+str+" sent");
 
 		}
@@ -378,25 +391,36 @@ public class MainActivity extends Activity {
 
 	/**
 	 * Handler connected with the bluetooth devices Threads: 
-	 * 	- OK : Get the Bluetooth address of the Arduino+
-	 *  - LDR_data : String value of LDR
 	 */
 	public Handler arduinoHandler = new Handler() {
 
 		@Override
 		public void handleMessage(Message msg) {
-			Bundle myBundle = msg.getData();
+			//Bundle myBundle = msg.getData();
 
-			if (myBundle.containsKey("OK")) {
-				Log.v(TAG, myBundle.getString("OK"));
-				easyToast(myBundle.getString("OK"));
-
-			}else if (myBundle.containsKey("LDR_data")){
-				Log.v(TAG, myBundle.getString("LDR_data"));
-				tvLdr.setText(myBundle.getString("LDR_data"));
-
+			switch (msg.what) {
+			case MESSAGE_READ:
+				String readMessage = (String) msg.obj;
+				Log.v(TAG, readMessage);
+				tvLdr.setText(readMessage);
+				break;
+			case MESSAGE_TOAST:
+				Toast.makeText(getApplicationContext(), msg.getData().getString(TOAST),
+						Toast.LENGTH_SHORT).show();
+				break;
+			case MESSAGE_CONNECT_ARDUINO:
+				ArduinoThread _newArduinoThread = null;
+				BluetoothDevice newDevice = (BluetoothDevice) msg.obj;
+				try {
+					_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
+					_newArduinoThread.start();
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD, _newArduinoThread).sendToTarget();
+				//_newArduino.initComm2();
 			}
-
 		}
 
 	};

@@ -35,6 +35,10 @@ public abstract class BTDeviceThread extends Thread {
 	// Adapter for the local Bluetooth adapter (the device's actual antenna)
 	public BluetoothDevice _bluetoothDev = null;
 
+	public BluetoothDevice get_bluetoothDev() {
+		return _bluetoothDev;
+	}
+
 	public BluetoothSocket _socket = null;
 	// The robot doesn't provide feedback to the App, only the outStream is needed
 	public InputStream _inStream = null;

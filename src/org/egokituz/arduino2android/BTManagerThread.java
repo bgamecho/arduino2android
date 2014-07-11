@@ -4,14 +4,15 @@
  */
 package org.egokituz.arduino2android;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
-
-
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -35,8 +36,7 @@ public class BTManagerThread extends Thread{
 
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	private static final int REQUEST_ENABLE_BT = 1;
-
-	private BTManagerThread _BTManager;
+	public static final int MESSAGE_BT_THREAD = 2;
 
 	private Handler mainHandler;
 	private Context mainCtx;
@@ -51,15 +51,13 @@ public class BTManagerThread extends Thread{
 	private List<BluetoothDevice> newDevicesList;
 
 	// Arduino devices ready to be paired
-	private Map<String,BluetoothDevice> unpairedArduinos;
+	private Map<String,BluetoothDevice> connectableArduinos;
 
 	// List of ignored devices that should never be used 
 	private Map<String,BluetoothDevice> ignoredDevicesList;
 
 	public BTManagerThread(Context context, Handler handler) {
 		Log.v(TAG, "BTManagerThread Constructor start");
-
-		_BTManager = this;
 
 		mainHandler = handler;
 		mainCtx = context;
@@ -169,6 +167,38 @@ public class BTManagerThread extends Thread{
 			}
 		}
 	};
+	
+	/**
+	 * Handler for receiving commands from the Activities
+	 */
+	public Handler btHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			switch (msg.what) {
+			case MESSAGE_BT_THREAD:
+				ArduinoThread aux = (ArduinoThread) msg.obj;
+				String devName = aux.get_bluetoothDev().getName();
+				myArduinoThreads.put(devName, aux);
+				Log.v(TAG, "Thread was successfully created");
+				break;
+
+			default:
+				break;
+			}
+		}
+	};
+	/**
+	 * Send messages to the class from we received the myHandler
+	 * @param code
+	 * @param value
+	 */
+	public void sendMessage(String code, String value){
+		Message msg = new Message();
+		Bundle myDataBundle = new Bundle();
+		myDataBundle.putString(code,value);
+		msg.setData(myDataBundle);
+		mainHandler.sendMessage(msg);  
+	}
 
 	public void finalize(){
 		Log.v(TAG, "finalize()");
@@ -210,11 +240,31 @@ public class BTManagerThread extends Thread{
 
 		mainCtx.unregisterReceiver(myReceiver);
 	}
+	
+	@Override
+	public synchronized void start() {
+		// TODO Auto-generated method stub
+		super.start();
+		myArduinoThreads = new HashMap<String,BTDeviceThread>();
+		newDevicesList = new ArrayList<BluetoothDevice>();
+		connectableArduinos = new HashMap<String,BluetoothDevice>();
+		ignoredDevicesList = new HashMap<String,BluetoothDevice>();
+		
+	}
+
+	@Override
+	public void run() {
+		super.run();
+		startDiscovery();
+		
+		while(!exit_condition){}
+	}
 
 
 	//--------------
 	//NESTED CLASS
 	//--------------
+
 
 	private boolean stop_discovery;
 	private boolean exit_condition;
@@ -260,7 +310,6 @@ public class BTManagerThread extends Thread{
 				}
 			}while (!exit_condition);
 
-			//BTmgr.sendInfo(R.string.TDM_EXIT, "TDM Exit");
 		}
 
 		/** 
@@ -273,9 +322,11 @@ public class BTManagerThread extends Thread{
 		private boolean discoverDevice(){
 			Log.v(TAG, "discoverDevice()");
 			boolean result = false;
+			newDevicesList.clear();	//TODO Check if this clear() is really necessary
 
 			// 0. Get bonded devices 
-			//Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
+			Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
+			newDevicesList.addAll(bondedDevices);
 
 			// 1. Check if previously bonded devices are no longer bonded (in which case, discard them)
 			//TODO
@@ -285,8 +336,8 @@ public class BTManagerThread extends Thread{
 			while(_BluetoothAdapter.isDiscovering()){
 			}
 
-			// 3. Select which devices are our Arduinos
-			newDevicesList.clear();	//TODO Check if this clear() is really necessary
+			// 3. Select which devices are our Arduinos, and put them in the connectableArduinos list
+			connectableArduinos.clear();
 			Iterator<BluetoothDevice> myIterator = newDevicesList.iterator();
 			BluetoothDevice device;
 			if(newDevicesList.size()>0){
@@ -294,11 +345,11 @@ public class BTManagerThread extends Thread{
 					device = myIterator.next();
 					String deviceName = device.getName()+"-"+device.getAddress();
 
-					if(deviceName.contains("Rob5") || deviceName.contains("BT_sensor")){
+					if(deviceName.contains("ROBOTICA_") || deviceName.contains("BT-SENSOR_")){
 
 						// If the Arduino is not already paired or ignored
 						if(!myArduinoThreads.containsKey(deviceName) && !ignoredDevicesList.containsKey(deviceName)){
-							unpairedArduinos.put(deviceName,device);
+							connectableArduinos.put(deviceName,device);
 						}
 					}
 				}
@@ -308,11 +359,12 @@ public class BTManagerThread extends Thread{
 			// 		y si no quiere emparejarlo, meterlo en la lista ignoredDevicesList 
 
 			// 5. Request connection with each new arduino
-			if(unpairedArduinos.size()>0){
+			if(connectableArduinos.size()>0){
 				result = true;
-				for(BluetoothDevice arduino: unpairedArduinos.values()){
-					//TODO: request user for pairing
-					//connectToArduino(arduino);
+				for(BluetoothDevice arduino: connectableArduinos.values()){
+					mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
+		        	
+					
 				}
 			}else{
 				Log.v(TAG, "There isn't any new arduino");
