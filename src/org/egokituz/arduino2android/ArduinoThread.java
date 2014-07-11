@@ -48,20 +48,19 @@ public class ArduinoThread extends BTDeviceThread{
 		synchronized(this){
 			try {
 				bytes = _inStream.read(buffer);
-				//myHandler.obtainMessage(MainActivity.MESSAGE_READ, bytes, -1, buffer).sendToTarget();
-				/*
+
 				for(byte aux : buffer){
 					if((char) aux == '\n' ){
 						Log.v(TAG, recvLine);
-						String[] parts = recvLine.split("msg:");
-						Log.v(TAG, parts[1]);
-						this.sendMessage("LDR_data", parts[1]);
+						//this.sendMessage("Received message", aux);
+						//myHandler.obtainMessage(MainActivity.MESSAGE_READ, recvLine.length(), -1, recvLine).sendToTarget();
+						myHandler.obtainMessage(MainActivity.MESSAGE_READ, recvLine).sendToTarget();
 						recvLine = "";
 					}else{
 						recvLine += (char) aux;
 					}
 				}
-				 */
+				
 			} catch (IOException e) {
 				Log.e(TAG, "IOException reading socket");
 				e.printStackTrace();

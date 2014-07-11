@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
 
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	private static final int REQUEST_ENABLE_BT = 1;
+	public static final int MESSAGE_READ = 2;
 
 	Button refreshButton, connectButton, disconnectButton,startButton,finButton;
 	Spinner spinnerBluetooth;
@@ -47,9 +48,9 @@ public class MainActivity extends Activity {
 	TextView tvLdr;
 
 	private String selected_arduinoMAC;
-	
+
 	private BTManagerThread myBTManagerThread;
-	
+
 	private ArduinoThread arduino;
 	boolean ardionoOn;
 
@@ -62,7 +63,7 @@ public class MainActivity extends Activity {
 
 		ardionoOn = false;
 		finishApp = false;
-		
+
 		setButtons();
 		updateSpinner();
 
@@ -114,34 +115,34 @@ public class MainActivity extends Activity {
 				connectToArduino();
 			}
 		});
-		
+
 		disconnectButton = (Button) findViewById(R.id.buttonDisconnect);
 		disconnectButton.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
 				disconnectAduino();
 			}
 		});
-		
+
 		startButton = (Button) findViewById(R.id.buttonStart);
 		startButton.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
 				startCommand();
 			}
 		});
-		
+
 		finButton =(Button) findViewById(R.id.buttonFin);
 		finButton.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
 				finalizeCommand();
 			}
 		});
-		
+
 		ledOn = (Button) findViewById(R.id.buttonLedOn);
 		ledOn.setOnClickListener(
 				new OnClickListener() {
@@ -229,7 +230,7 @@ public class MainActivity extends Activity {
 	//Updates the items of the Bluetooth devices' spinner
 	private void updateSpinner(){
 		String[] myDeviceList = this.getBluetoothDevices();
-		
+
 		for(int i=0;i<myDeviceList.length; i++){
 			if(!myDeviceList[i].startsWith("BT-") || !myDeviceList[i].startsWith("ROB") )
 				myDeviceList[i].length();
@@ -269,7 +270,7 @@ public class MainActivity extends Activity {
 	public void disconnectAduino(){
 		//sendCommandArduino("f");
 
-		
+
 		new Handler().postDelayed(new Runnable(){
 			public void run() {
 				arduino.finalizeThread();
@@ -279,11 +280,11 @@ public class MainActivity extends Activity {
 						finish();
 					}                   
 				}, 1000);
-				*/
+				 */
 			}                   
 		}, 1000);
 	}
-	
+
 	public void startCommand(){
 		sendCommandArduino("s");
 	}
@@ -385,21 +386,13 @@ public class MainActivity extends Activity {
 
 		@Override
 		public void handleMessage(Message msg) {
-			Bundle myBundle = msg.getData();
 
-			if (myBundle.containsKey("OK")) {
-				Log.v(TAG, myBundle.getString("OK"));
-				easyToast(myBundle.getString("OK"));
-
-			}else if (myBundle.containsKey("LDR_data")){
-				Log.v(TAG, myBundle.getString("LDR_data"));
-				tvLdr.setText(myBundle.getString("LDR_data"));
-
+			switch (msg.what) {
+			case MESSAGE_READ:
+				String readMessage = (String) msg.obj;
+				Log.v(TAG, readMessage);
+				tvLdr.setText(readMessage);
+				break;
 			}
-
-		}
-
-	};
-
-
+		}};
 }
