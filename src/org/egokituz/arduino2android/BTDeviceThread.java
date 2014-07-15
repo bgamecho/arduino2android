@@ -3,6 +3,7 @@ package org.egokituz.arduino2android;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
@@ -29,13 +30,14 @@ public abstract class BTDeviceThread extends Thread {
 
 	boolean terminateFlag;
 	boolean beforeStart;
+	boolean connected;
 
 	Handler myHandler;
 
 
 	public BluetoothDevice _bluetoothDev = null;
 
-	public BluetoothDevice getBluetoothDeviceName() {
+	public BluetoothDevice getBluetoothDevice() {
 		return _bluetoothDev;
 	}
 	public String getDeviceName() {
@@ -59,6 +61,7 @@ public abstract class BTDeviceThread extends Thread {
 	public BTDeviceThread(Handler myHandler) throws Exception{
 		terminateFlag = false;
 		beforeStart = true;
+		connected=false;
 		this.myHandler = myHandler;
 	}
 
@@ -96,12 +99,31 @@ public abstract class BTDeviceThread extends Thread {
 		}
 	}
 
-	public void initComm2() throws Exception{
-		Method m = _bluetoothDev.getClass().getMethod("createRfcommSocket", new Class[] { int.class });
-		_socket = (BluetoothSocket) m.invoke(_bluetoothDev, 1);
-		_socket.connect();
-		_inStream = _socket.getInputStream();
-		_outStream = _socket.getOutputStream();
+	public void initComm2(){
+		try {
+			Method m = _bluetoothDev.getClass().getMethod("createRfcommSocket", new Class[] { int.class });
+			_socket = (BluetoothSocket) m.invoke(_bluetoothDev, 1);
+			_socket.connect();
+			_inStream = _socket.getInputStream();
+			_outStream = _socket.getOutputStream();
+			if(_socket.isConnected())
+				connected = true;
+		} catch (NoSuchMethodException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	/**

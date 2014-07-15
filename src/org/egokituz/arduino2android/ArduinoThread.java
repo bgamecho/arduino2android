@@ -30,7 +30,13 @@ public class ArduinoThread extends BTDeviceThread{
 		//super.initComm();
 		//super.initComm2();
 		super.initComm2();
+		
+		if(this.connected){
+		//TODO: this message is ever received?
 		super.sendMessage("OK", "Connected to Arduino device at: "+_bluetoothDev.getAddress());
+		}else{
+			throw new Exception("could not connect");
+		}
 	}
 
 	@Override
@@ -45,29 +51,48 @@ public class ArduinoThread extends BTDeviceThread{
 
 	@Override
 	public void loop() {
-		synchronized(this){
+		//synchronized(this){
 			try {
-				bytes = _inStream.read(buffer);
-				
+				if(_inStream.available()>0){
+					bytes = _inStream.read(buffer);
+					
+					byte[] auxBuff = new byte[1024];
+					System.arraycopy(buffer, 0, auxBuff, 0, 1024);
+					myHandler.obtainMessage(MainActivity.MESSAGE_READ, bytes, -1, auxBuff)
+	                .sendToTarget();
+				}
+				/*
 				for(byte aux : buffer){
 					if((char) aux == '\n' ){
-						Log.v(TAG, recvLine);
+						//Log.v(TAG, recvLine);
 						//this.sendMessage("Received message", aux);
 						//myHandler.obtainMessage(MainActivity.MESSAGE_READ, recvLine.length(), -1, recvLine).sendToTarget();
-						myHandler.obtainMessage(MainActivity.MESSAGE_READ, recvLine).sendToTarget();
+						
+						byte[] auxBuff = new byte[1024];
+						System.arraycopy(buffer, 0, auxBuff, 0, 1024);
+						myHandler.obtainMessage(MainActivity.MESSAGE_READ, bytes, -1, auxBuff)
+                        .sendToTarget();
+						//myHandler.obtainMessage(MainActivity.MESSAGE_READ, recvLine).sendToTarget();
 						recvLine = "";
 					}else{
 						recvLine += (char) aux;
 					}
-				}
+				}*/
 			} catch (IOException e) {
 				Log.e(TAG, "IOException reading socket");
 				e.printStackTrace();
 			} catch (Exception e){
-				Log.e(TAG, "other exception");
-				e.printStackTrace();
+				//Log.e(TAG, "other exception");
+				//e.printStackTrace();
 			}
-		}// end the synchronized code
+		//}// end the synchronized code
+		
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			Log.e(TAG, "Error waiting in the loop of the robot");
+			e.printStackTrace();
+		}
 	}
 
 	/**

@@ -4,9 +4,14 @@
  */
 package org.egokituz.arduino2android;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -21,6 +26,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -38,6 +44,7 @@ public class BTManagerThread extends Thread{
 	private static final int REQUEST_ENABLE_BT = 1;
 	public static final int MESSAGE_BT_THREAD_CREATED = 2;
 	public static final int MESSAGE_SEND_COMMAND = 3;
+	protected static final int MESSAGE_ERROR_CREATING_BT_THREAD = 0;
 
 	private Handler mainHandler;
 	private Context mainCtx;
@@ -57,11 +64,47 @@ public class BTManagerThread extends Thread{
 	// List of ignored devices that should never be used 
 	private Map<String,BluetoothDevice> ignoredDevicesList;
 
+	public static BufferedWriter out;
+	
+	/**
+	 * Function to initially create the log file and it also writes the time of creation to file.
+	 */
+	private void createFileOnDevice(Boolean append) throws IOException {
+		
+		File Root = Environment.getExternalStorageDirectory();
+		if(Root.canWrite()){
+			File  LogFile = new File(Root, "LogXABI.txt");
+			FileWriter LogWriter = new FileWriter(LogFile, append);
+			out = new BufferedWriter(LogWriter);
+			Date date = new Date();
+			out.write("Logged at" + String.valueOf(date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + "\n"));
+			//TODO remember to call out.close() or otherwise it won't write to the file
+		}
+	}
+	
+	public void writeToFile(String message){
+        try {
+        	createFileOnDevice(true);
+            out.write(message+"\n");
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+	}
+
 	public BTManagerThread(Context context, Handler handler) {
 		Log.v(TAG, "BTManagerThread Constructor start");
 
 		mainHandler = handler;
 		mainCtx = context;
+		
+		//set log to write/append file
+		try {
+			createFileOnDevice(false);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 		//TODO set BLUETOOTH
 		_BluetoothAdapter = BluetoothAdapter.getDefaultAdapter();    
@@ -169,17 +212,18 @@ public class BTManagerThread extends Thread{
 			}
 		}
 	};
-	
+
 	/**
 	 * Handler for receiving commands from the Activities
 	 */
 	public Handler btHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
+			ArduinoThread aux;
 			switch (msg.what) {
 			case MESSAGE_BT_THREAD_CREATED:
-				ArduinoThread aux = (ArduinoThread) msg.obj;
-				String devName = aux.getBluetoothDeviceName().getName();
+				aux = (ArduinoThread) msg.obj;
+				String devName = aux.getBluetoothDevice().getName();
 				myArduinoThreads.put(devName, aux);
 				Log.v(TAG, "Thread was successfully created");
 				break;
@@ -187,7 +231,7 @@ public class BTManagerThread extends Thread{
 				Bundle mBundle = msg.getData();
 				String command = mBundle.getString("COMMAND");
 				String MAC =  mBundle.getString("MAC");
-				
+
 				for(BTDeviceThread th : myArduinoThreads.values()){
 					if(th.getDeviceMAC().equals(MAC)){
 						Message sendMsg = new Message();
@@ -198,7 +242,13 @@ public class BTManagerThread extends Thread{
 						((ArduinoThread) th).getHandler().sendMessage(sendMsg);
 					}
 				}
-				
+				break;
+			case MESSAGE_ERROR_CREATING_BT_THREAD:
+				aux = (ArduinoThread) msg.obj;
+				Log.v(TAG, "Finalizing thread");
+				if(aux!=null)
+					aux.finalizeThread();
+
 			default:
 				break;
 			}
@@ -220,7 +270,23 @@ public class BTManagerThread extends Thread{
 	public void finalize(){
 		Log.v(TAG, "finalize()");
 		//TODO poner a null receivers
+		//mainCtx.unregisterReceiver(myReceiver);
+		
+		//Finalizar threads
+		for(BTDeviceThread th : myArduinoThreads.values()){
+			th.finalizeThread();
+		}
+		
+		try {
+			Log.v(TAG, "Writing to log...");
+			out.close(); //TODO until out.close() the log messages won't be written to the file
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
+	
+
 
 	private boolean isBTReady(){
 		Log.v(TAG, "isBTReady()");
@@ -257,7 +323,7 @@ public class BTManagerThread extends Thread{
 
 		mainCtx.unregisterReceiver(myReceiver);
 	}
-	
+
 	@Override
 	public synchronized void start() {
 		// TODO Auto-generated method stub
@@ -266,14 +332,14 @@ public class BTManagerThread extends Thread{
 		newDevicesList = new ArrayList<BluetoothDevice>();
 		connectableArduinos = new HashMap<String,BluetoothDevice>();
 		ignoredDevicesList = new HashMap<String,BluetoothDevice>();
-		
+
 	}
 
 	@Override
 	public void run() {
 		super.run();
 		startDiscovery();
-		
+
 		while(!exit_condition){}
 	}
 
@@ -389,9 +455,16 @@ public class BTManagerThread extends Thread{
 			}
 
 			Log.v(TAG, "discoverDevice() returns : "+ result);
+			
+			//write to Log
+			writeToFile("discoverDevice() returns : ");
+			
+			
 			return result;		
 		}
 	}
+	
+	
 }
 
 

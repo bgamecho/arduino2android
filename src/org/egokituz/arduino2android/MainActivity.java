@@ -213,7 +213,19 @@ public class MainActivity extends Activity {
 	@Override
 	public void onDestroy(){
 		Log.v(TAG, "Arduino Activity --OnDestroy()--");
-		super.onDestroy();	
+		super.onDestroy();
+		
+		//Finalize threads
+		myBTManagerThread.finalize();
+	}
+
+
+	@Override
+	public void finish() {
+		Log.v(TAG, "Arduino Activity --OnDestroy()--");
+		super.finish();
+		//Finalize threads
+		myBTManagerThread.finalize();
 	}
 
 
@@ -403,7 +415,12 @@ public class MainActivity extends Activity {
 
 			switch (msg.what) {
 			case MESSAGE_READ:
-				String readMessage = (String) msg.obj;
+				byte[] readBuf = (byte[]) msg.obj;
+                // construct a string from the valid bytes in the buffer
+                String readMessage = new String(readBuf, 0, msg.arg1);
+				
+				
+				//String readMessage = (String) msg.obj;
 				Log.v(TAG, readMessage);
 				tvLdr.setText(readMessage);
 				break;
@@ -418,14 +435,16 @@ public class MainActivity extends Activity {
 				//TODO check that there is no other thread connected with this device
 				
 				try {
+					Log.v(TAG, "Trying to connect to "+newDevice.getAddress());
 					_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
 					_newArduinoThread.start();
+					myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
+					myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, _newArduinoThread).sendToTarget();
+					Log.v(TAG, "Could not create thread for "+newDevice.getAddress());
 					e.printStackTrace();
 				}
-				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
-				//_newArduino.initComm2();
 			}
 		}
 
