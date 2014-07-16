@@ -30,10 +30,10 @@ public class ArduinoThread extends BTDeviceThread{
 		//super.initComm();
 		//super.initComm2();
 		super.initComm2();
-		
+
 		if(this.connected){
-		//TODO: this message is ever received?
-		super.sendMessage("OK", "Connected to Arduino device at: "+_bluetoothDev.getAddress());
+			//TODO: this message is ever received?
+			super.sendMessage("OK", "Connected to Arduino device at: "+_bluetoothDev.getAddress());
 		}else{
 			throw new Exception("could not connect");
 		}
@@ -48,26 +48,32 @@ public class ArduinoThread extends BTDeviceThread{
 	byte[] buffer = new byte[1024];
 	int bytes;
 	String currentCommand;
+    int b = 0;
+    int bufferIndex = 0;
+    int payloadBytesRemaining;
 
 	@Override
 	public void loop() {
 		//synchronized(this){
-			try {
-				if(_inStream.available()>0){
-					bytes = _inStream.read(buffer);
-					
-					byte[] auxBuff = new byte[1024];
-					System.arraycopy(buffer, 0, auxBuff, 0, 1024);
-					myHandler.obtainMessage(MainActivity.MESSAGE_READ, bytes, -1, auxBuff)
-	                .sendToTarget();
-				}
-				/*
+		try {
+
+			bufferIndex = 0;
+        	// Read bytes from the stream until we encounter the the start of message character
+        	while ( (char)( b = _inStream.read()) != '\n' )
+        		buffer[bufferIndex++] = (byte) b;
+
+			byte[] auxBuff = new byte[--bufferIndex];
+			System.arraycopy(buffer, 0, auxBuff, 0, bufferIndex);
+			myHandler.obtainMessage(MainActivity.MESSAGE_READ, bufferIndex, -1, auxBuff)
+			.sendToTarget();
+
+			/*
 				for(byte aux : buffer){
 					if((char) aux == '\n' ){
 						//Log.v(TAG, recvLine);
 						//this.sendMessage("Received message", aux);
 						//myHandler.obtainMessage(MainActivity.MESSAGE_READ, recvLine.length(), -1, recvLine).sendToTarget();
-						
+
 						byte[] auxBuff = new byte[1024];
 						System.arraycopy(buffer, 0, auxBuff, 0, 1024);
 						myHandler.obtainMessage(MainActivity.MESSAGE_READ, bytes, -1, auxBuff)
@@ -78,15 +84,15 @@ public class ArduinoThread extends BTDeviceThread{
 						recvLine += (char) aux;
 					}
 				}*/
-			} catch (IOException e) {
-				Log.e(TAG, "IOException reading socket");
-				e.printStackTrace();
-			} catch (Exception e){
-				//Log.e(TAG, "other exception");
-				//e.printStackTrace();
-			}
+		} catch (IOException e) {
+			Log.e(TAG, "IOException reading socket");
+			e.printStackTrace();
+		} catch (Exception e){
+			Log.e(TAG, "other exception");
+			e.printStackTrace();
+		}
 		//}// end the synchronized code
-		
+
 		try {
 			Thread.sleep(100);
 		} catch (InterruptedException e) {

@@ -21,7 +21,7 @@ class AnalogPlot:
   # constr
   def __init__(self, strPort, maxLen):
       # open serial port
-      self.ser = serial.Serial(strPort, 9600)
+      self.ser = serial.Serial(strPort, 57600)
 
       self.ax = deque([0.0]*maxLen)
       self.ay = deque([0.0]*maxLen)
@@ -44,13 +44,16 @@ class AnalogPlot:
   # update plot
   def update(self, frameNum, a0, a1):
       try:
-          line = self.ser.readline()
-          data = [float(val) for val in line.split()]
-          # print data
-          if(len(data) == 2):
-              self.add(data)
-              a0.set_data(range(self.maxLen), self.ax)
-              a1.set_data(range(self.maxLen), self.ay)
+          for i in range (0, 10):
+              line = self.ser.readline()
+              data = [float(val) for val in line.split()]
+              # print data
+              if(len(data) == 2):
+                  self.add(data)
+                  a0.set_data(range(self.maxLen), self.ax)
+                  a1.set_data(range(self.maxLen), self.ay)
+              
+              
       except KeyboardInterrupt:
           print('exiting')
       
@@ -81,7 +84,7 @@ def main():
   analogPlot = AnalogPlot(strPort, 100)
 
   print('plotting data...')
-
+  
   # set up animation
   fig = plt.figure()
   ax = plt.axes(xlim=(0, 100), ylim=(0, 1023))

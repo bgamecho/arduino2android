@@ -271,6 +271,7 @@ public class BTManagerThread extends Thread{
 		Log.v(TAG, "finalize()");
 		//TODO poner a null receivers
 		//mainCtx.unregisterReceiver(myReceiver);
+		mainCtx.unregisterReceiver(myReceiver);
 		
 		//Finalizar threads
 		for(BTDeviceThread th : myArduinoThreads.values()){
