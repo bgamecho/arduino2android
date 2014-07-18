@@ -8,6 +8,7 @@ Lists the serial ports available on the computer (Windows).
 """
 
 import sys
+from PyQt4 import QtGui
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 #sys.path.append("C:\\Documents and Settings\\Sensores\\Mis documentos\\Dropbox\\PFG\\git\\arduino2android\\Assets\\Python")
@@ -60,10 +61,14 @@ class ListPortsDialog(QDialog):
         self.tryopen_button = QPushButton('Try to open')
         self.connect(self.tryopen_button, SIGNAL('clicked()'),
             self.on_tryopen)
+        
+        self.close_button = QPushButton('Close all ports')
+        self.connect(self.close_button,SIGNAL('clicked()'), self.on_close)
 
         layout = QVBoxLayout()
         layout.addWidget(self.ports_list)
         layout.addWidget(self.tryopen_button)
+        layout.addWidget(self.close_button)
         self.setLayout(layout)
 
         self.fill_ports_list()
@@ -73,7 +78,22 @@ class ListPortsDialog(QDialog):
         if cur_item is not None:
             fullname = full_port_name(str(cur_item.text()))
             try:
-                ser = serial.Serial(fullname, 38400)
+                ser = serial.Serial(fullname, 57600)
+                QMessageBox.information(self, 'Success',
+                    'Opened %s successfully' % cur_item.text())
+                ser.close()
+                QMessageBox.information(self, 'Success',
+                    'Closed %s successfully' % cur_item.text())
+            except SerialException, e:
+                QMessageBox.critical(self, 'Failure',
+                    'Failed to open %s:\n%s' % (
+                        cur_item.text(), e))
+                        
+    def on_close(self):
+        for port in self.ports_list.items:
+            fullname = full_port_name(str(cur_item.text()))
+            try:
+                ser = serial.Serial(fullname, 57600)
                 ser.close()
                 QMessageBox.information(self, 'Success',
                     'Opened %s successfully' % cur_item.text())
@@ -89,7 +109,8 @@ class ListPortsDialog(QDialog):
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    #app = QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
     form = ListPortsDialog()
     form.show()
-    app.exec_()
+    
