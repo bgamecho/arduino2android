@@ -41,10 +41,11 @@ public class BTManagerThread extends Thread{
 	private static final String TAG = "BTManager";
 
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
+	protected static final int MESSAGE_ERROR_CREATING_BT_THREAD = 0;
 	private static final int REQUEST_ENABLE_BT = 1;
 	public static final int MESSAGE_BT_THREAD_CREATED = 2;
 	public static final int MESSAGE_SEND_COMMAND = 3;
-	protected static final int MESSAGE_ERROR_CREATING_BT_THREAD = 0;
+	public static final int MESSAGE_CONNECTION_LOST = 4;
 
 	private Handler mainHandler;
 	private Context mainCtx;
@@ -65,12 +66,12 @@ public class BTManagerThread extends Thread{
 	private Map<String,BluetoothDevice> ignoredDevicesList;
 
 	public static BufferedWriter out;
-	
+
 	/**
 	 * Function to initially create the log file and it also writes the time of creation to file.
 	 */
 	private void createFileOnDevice(Boolean append) throws IOException {
-		
+
 		File Root = Environment.getExternalStorageDirectory();
 		if(Root.canWrite()){
 			File  LogFile = new File(Root, "LogXABI.txt");
@@ -81,15 +82,15 @@ public class BTManagerThread extends Thread{
 			//TODO remember to call out.close() or otherwise it won't write to the file
 		}
 	}
-	
+
 	public void writeToFile(String message){
-        try {
-        	createFileOnDevice(true);
-            out.write(message+"\n");
-            out.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+		try {
+			createFileOnDevice(true);
+			out.write(message+"\n");
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public BTManagerThread(Context context, Handler handler) {
@@ -97,7 +98,7 @@ public class BTManagerThread extends Thread{
 
 		mainHandler = handler;
 		mainCtx = context;
-		
+
 		//set log to write/append file
 		try {
 			createFileOnDevice(false);
@@ -150,8 +151,14 @@ public class BTManagerThread extends Thread{
 			case BluetoothDevice.ACTION_FOUND:
 				//TODO When discovery finds a device
 				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				if(newDevicesList.contains(device))
-					newDevicesList.add(device);
+				deviceName = device.getName()+"-"+device.getAddress();
+				if(!newDevicesList.contains(device) && !ignoredDevicesList.containsKey(deviceName)){
+					
+					synchronized (newDevicesList) {
+						newDevicesList.add(device);
+					}
+					Log.v(TAG, "New device found: "+deviceName);
+				}
 
 				break;
 			case BluetoothDevice.ACTION_ACL_CONNECTED:
@@ -173,10 +180,14 @@ public class BTManagerThread extends Thread{
 				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				deviceName = device.getName()+"-"+device.getAddress();
 				Log.v(TAG, "Disconnected "+deviceName);
+				finalizeArduinoThread(device.getAddress());
 
 				break;
 
-
+			case BluetoothAdapter.ACTION_DISCOVERY_STARTED:
+				//TODO When discovery is started
+				Log.v(TAG, "discovery started");
+				break;
 			case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
 				//TODO When discovery is finished
 				Log.v(TAG, "discovery is finished");
@@ -219,18 +230,25 @@ public class BTManagerThread extends Thread{
 	public Handler btHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
-			ArduinoThread aux;
+			ArduinoThread arduinoTh;
+			Bundle mBundle;
+			String devId;
+			String MAC;
+			BluetoothDevice btDevice;
+
+
 			switch (msg.what) {
 			case MESSAGE_BT_THREAD_CREATED:
-				aux = (ArduinoThread) msg.obj;
-				String devName = aux.getBluetoothDevice().getName();
-				myArduinoThreads.put(devName, aux);
+				arduinoTh = (ArduinoThread) msg.obj;
+				btDevice = arduinoTh.getBluetoothDevice(); 
+				devId = btDevice.getName()+"-"+btDevice.getAddress();
+				myArduinoThreads.put(devId, arduinoTh);
 				Log.v(TAG, "Thread was successfully created");
 				break;
 			case MESSAGE_SEND_COMMAND:
-				Bundle mBundle = msg.getData();
+				mBundle = msg.getData();
 				String command = mBundle.getString("COMMAND");
-				String MAC =  mBundle.getString("MAC");
+				MAC =  mBundle.getString("MAC");
 
 				for(BTDeviceThread th : myArduinoThreads.values()){
 					if(th.getDeviceMAC().equals(MAC)){
@@ -243,17 +261,46 @@ public class BTManagerThread extends Thread{
 					}
 				}
 				break;
+			case MESSAGE_CONNECTION_LOST:
+				mBundle = msg.getData();
+				MAC =  mBundle.getString("MAC");
+				if(MAC!=null)
+					finalizeArduinoThread(MAC);
 			case MESSAGE_ERROR_CREATING_BT_THREAD:
-				aux = (ArduinoThread) msg.obj;
-				Log.v(TAG, "Finalizing thread");
-				if(aux!=null)
-					aux.finalizeThread();
+				//TODO what should be done with an Arduino that cannot be connected?
+				//	a) Put it in the ignored devices list?
+				//	b) 
 
 			default:
 				break;
 			}
 		}
+
 	};
+
+	private void finalizeArduinoThread(String MAC) {
+		for(BTDeviceThread th : myArduinoThreads.values()){
+			String devId = th.getDeviceName()+"-"+th.getDeviceMAC();
+			if(devId.contains(MAC)){
+				Log.v(TAG, "Finalizing thread for "+devId);
+				th.finalizeThread();
+			}
+		}
+	}
+
+	public String[] getConnectedArduinos(){
+		String[] result = null;
+		ArrayList<String> devices = new ArrayList<String>(); 
+
+		for(String devId : myArduinoThreads.keySet()){
+			BTDeviceThread dev = myArduinoThreads.get(devId);
+			if(dev.isAlive() && dev.isConnected())
+				devices.add(devId);
+		}
+		result = (String[]) devices.toArray(new String[devices.size()]);
+		return result;
+	}
+
 	/**
 	 * Send messages to the class from we received the myHandler
 	 * @param code
@@ -270,14 +317,16 @@ public class BTManagerThread extends Thread{
 	public void finalize(){
 		Log.v(TAG, "finalize()");
 		//TODO poner a null receivers
-		//mainCtx.unregisterReceiver(myReceiver);
-		mainCtx.unregisterReceiver(myReceiver);
-		
+
 		//Finalizar threads
 		for(BTDeviceThread th : myArduinoThreads.values()){
 			th.finalizeThread();
 		}
-		
+
+		Log.v(TAG, "Unregistering receiver");
+		mainCtx.unregisterReceiver(myReceiver);
+		Log.v(TAG, "receiver unregistered");
+
 		try {
 			Log.v(TAG, "Writing to log...");
 			out.close(); //TODO until out.close() the log messages won't be written to the file
@@ -285,8 +334,9 @@ public class BTManagerThread extends Thread{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		exit_condition = true;
 	}
-	
+
 
 
 	private boolean isBTReady(){
@@ -407,7 +457,7 @@ public class BTManagerThread extends Thread{
 		private boolean discoverDevice(){
 			Log.v(TAG, "discoverDevice()");
 			boolean result = false;
-			newDevicesList.clear();	//TODO Check if this clear() is really necessary
+			//newDevicesList.clear();	//TODO Check if this clear() is really necessary
 
 			// 0. Get bonded devices (only the first time) 
 			if(firstDiscovery){
@@ -427,20 +477,34 @@ public class BTManagerThread extends Thread{
 			connectableArduinos.clear();
 			Iterator<BluetoothDevice> myIterator = newDevicesList.iterator();
 			BluetoothDevice device;
-			if(newDevicesList.size()>0){
-				while(myIterator.hasNext()){
-					device = myIterator.next();
-					String deviceName = device.getName()+"-"+device.getAddress();
+			
+			synchronized (newDevicesList) {
+				if (newDevicesList.size() > 0) {
+					while (myIterator.hasNext()) {
+						device = myIterator.next();
+						String deviceId = device.getName() + "-"
+								+ device.getAddress();
 
-					if(deviceName.contains("ROBOTICA_") || deviceName.contains("BT-SENSOR_")){
+						if (deviceId.contains("ROBOTICA_")
+								|| deviceId.contains("BT-SENSOR_")) {
 
-						// Discard devices that are already connected, ignored or due for connection 
-						if(!myArduinoThreads.containsKey(deviceName) && !ignoredDevicesList.containsKey(deviceName) && !connectableArduinos.containsKey(deviceName)){
-							connectableArduinos.put(deviceName,device);
+							// Discard devices that are already connected, ignored or due for connection 
+							if (!myArduinoThreads.containsKey(deviceId)
+									&& !ignoredDevicesList
+											.containsKey(deviceId)
+									&& !connectableArduinos
+											.containsKey(deviceId)) {
+								connectableArduinos.put(deviceId, device);
+							}
+						} else if (!ignoredDevicesList.containsKey(deviceId)) {
+							//Put device in the Black-List, as it does not have any interest to us
+							Log.v(TAG, "Ignoring device " + deviceId);
+							ignoredDevicesList.put(deviceId, device);
 						}
 					}
 				}
 			}
+			
 
 			//TODO Preguntarle al usuario mediante un Dialog si quiere emparejar el nuevo dispositivo,
 			// 		y si no quiere emparejarlo, meterlo en la lista ignoredDevicesList 
@@ -456,16 +520,16 @@ public class BTManagerThread extends Thread{
 			}
 
 			Log.v(TAG, "discoverDevice() returns : "+ result);
-			
+
 			//write to Log
 			writeToFile("discoverDevice() returns : ");
-			
-			
+
+
 			return result;		
 		}
 	}
-	
-	
+
+
 }
 
 

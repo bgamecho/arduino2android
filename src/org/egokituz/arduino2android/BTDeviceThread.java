@@ -23,7 +23,7 @@ import android.util.Log;
  */
 public abstract class BTDeviceThread extends Thread {
 
-	public static String TAG;
+	public final static String TAG = "BTDeviceThread";
 
 	//TODO check if this is ok for all Bluetooth devices
 	private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
@@ -122,7 +122,7 @@ public abstract class BTDeviceThread extends Thread {
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 
@@ -183,14 +183,14 @@ public abstract class BTDeviceThread extends Thread {
 
 		// After the threads ends close the connection and release the socket connection 
 		resetConnection();
-//		try {
-//			_inStream.close();
-//			_outStream.close();
-//			_socket.close();
-//		} catch (IOException e) {
-//			Log.e(TAG, "Closing the connection with the Robot");
-//			e.printStackTrace();
-//		}
+		//		try {
+		//			_inStream.close();
+		//			_outStream.close();
+		//			_socket.close();
+		//		} catch (IOException e) {
+		//			Log.e(TAG, "Closing the connection with the Robot");
+		//			e.printStackTrace();
+		//		}
 
 		this.sendMessage("OFF", this.getName());
 	}
@@ -227,6 +227,24 @@ public abstract class BTDeviceThread extends Thread {
 				//Do nothing
 			}
 			_socket = null;
+			connected = false;
+		}
+	}
+
+	public void connectionLost(){
+		resetConnection();
+		initComm2();
+		if(!connected){
+			String MAC = this.getDeviceMAC();
+			//(BTManagerThread.MESSAGE_CONNECTION_LOST, MAC);
+			if(MAC!=null){
+				Message sendMsg = new Message();
+				Bundle myDataBundle = new Bundle();
+				myDataBundle.putString("MAC", MAC);
+				sendMsg.setData(myDataBundle);
+				sendMsg.what = BTManagerThread.MESSAGE_CONNECTION_LOST;
+				myHandler.sendMessage(sendMsg);
+			}
 		}
 	}
 
@@ -264,8 +282,13 @@ public abstract class BTDeviceThread extends Thread {
 
 			}
 		}
-
-
+	}
+	
+	public boolean isConnected() {
+		// TODO Auto-generated method stub
+		if(_bluetoothDev.getBondState() == BluetoothDevice.BOND_BONDED)
+			return true;
+		return false;
 	}
 
 }

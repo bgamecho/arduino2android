@@ -11,6 +11,7 @@ import threading
 import Queue
 import PyQt4
 import numpy
+import matplotlib.pyplot as plt
 #from __future__ import print_function
 from serial.serialutil import SerialException
 from time import sleep
@@ -104,7 +105,6 @@ def show_ports(lock):
 
 def scan_log(lock):
     with lock:
-        print 'This function is not yet done'
         logFile = gui_fname("C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/")
         print 'You selected the file: '+logFile
         #data = numpy.loadtxt(logFile, 'float')
@@ -112,10 +112,39 @@ def scan_log(lock):
         data = numpy.genfromtxt(logFile,dtype='str')
         print data
         #noisy sequence:
-        nSeq = data[0:30,1]
+        sSeq = data[0:1000,1]
+        #nSeq = [map(int, x) for x in sSeq]
+        nSeq = sSeq.astype(numpy.float)
         print nSeq
         maxLen = len(nSeq)
         print maxLen
+        
+        plt.figure()
+        plt.plot(nSeq)
+        plt.show()
+#        #Plotting
+#        fix, ax = plt.subplots()
+#        x = numpy.linspace(0, maxLen)
+#        y = numpy.linspace(0, 3)
+#        ax.plot(x, y, 'k--')
+#        ax.plot(x, nSeq, 'ro')
+#        
+#        ax.set_xlim(54)
+#        ax.set_xticks(nSeq)
+#        ax.set_xticklabels(['0', '10', '20', '30', '40'])
+#        ax.set_ylim(0, 3)
+#        ax.set_yticks([0.5, 1, 1.5, 2, 2.5])
+#        
+#        # Only draw spine between the y-ticks
+#        ax.spines['left'].set_bounds(0, 3)
+#        # Hide the right and top spines
+#        ax.spines['right'].set_visible(True)
+#        ax.spines['top'].set_visible(True)
+#        # Only show ticks on the left and bottom spines
+#        ax.yaxis.set_ticks_position('left')
+#        ax.xaxis.set_ticks_position('bottom')
+#        
+#        plt.show()
 
 def gui_fname(dir=None):
   """Select a file via a dialog and return the file name.
@@ -142,7 +171,6 @@ def main():
 
     while 1:
         cmd = cmd_queue.get()
-        print 'hi'
         if cmd == 'quit':
             break
         action = cmd_actions.get(cmd, invalid_input)

@@ -1,21 +1,14 @@
 package org.egokituz.arduino2android;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.Set;
-import java.util.Vector;
-
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.Parcelable;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -25,13 +18,13 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 /**
  * 
- * @author bgamecho
+ * @author xgardeazabal
  *
  */
 public class MainActivity extends Activity {
@@ -50,12 +43,14 @@ public class MainActivity extends Activity {
 
 	Button refreshButton, connectButton, disconnectButton,startButton,finButton;
 	Spinner spinnerBluetooth;
+	ListView devicesListView;
 	Button ledOn;
 	TextView tvLdr;
 
 	private String selected_arduinoMAC;
 
 	private BTManagerThread myBTManagerThread;
+	private BatteryMonitorThread myBatteryMonitor;
 
 	private ArduinoThread arduino;
 	boolean ardionoOn;
@@ -71,12 +66,13 @@ public class MainActivity extends Activity {
 		finishApp = false;
 
 		setButtons();
+		populateDeviceListView();
 		updateSpinner();
-		
+
 		myBTManagerThread = new BTManagerThread(this, arduinoHandler);
+		myBatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
 
 	}
-
 
 	private void setButtons() {
 		// TODO Auto-generated method stub
@@ -165,12 +161,31 @@ public class MainActivity extends Activity {
 
 	}
 
+	private void populateDeviceListView() {
+		// TODO Auto-generated method stub
+		devicesListView = (ListView) findViewById(R.id.listViewDevices);
+
+		final String[] myDeviceList = getConnectedDevices();
+
+		if(myDeviceList != null){
+			ArrayAdapter<String> listViewArrayAdapter = new ArrayAdapter<String>(this, 
+					android.R.layout.simple_list_item_1, myDeviceList);
+			devicesListView.setAdapter(listViewArrayAdapter);
+		}
+
+
+
+	}
+
+
 
 	@Override 
 	public void onStart(){
 		Log.v(TAG, "Arduino Activity --OnStart()--");
 		if(!myBTManagerThread.isAlive())
 			myBTManagerThread.start();
+		if(!myBatteryMonitor.isAlive())
+			myBatteryMonitor.start();
 		super.onStart();
 	}
 
@@ -183,7 +198,6 @@ public class MainActivity extends Activity {
 	@Override
 	public void onPause(){
 		Log.v(TAG, "Arduino Activity --OnPause()--");
-		//unregisterReceiver(myReceiver);
 		super.onPause();
 	}
 
@@ -214,7 +228,7 @@ public class MainActivity extends Activity {
 	public void onDestroy(){
 		Log.v(TAG, "Arduino Activity --OnDestroy()--");
 		super.onDestroy();
-		
+
 		//Finalize threads
 		myBTManagerThread.finalize();
 	}
@@ -396,9 +410,15 @@ public class MainActivity extends Activity {
 
 	}
 
-	public void easyToast(String message){
-		Toast.makeText(getBaseContext(), message, Toast.LENGTH_SHORT).show();	  
+	public String[] getConnectedDevices(){
+		String[] result = null;
+
+		if(myBTManagerThread != null && myBTManagerThread.isAlive())
+			result = myBTManagerThread.getConnectedArduinos();
+		return result;
+
 	}
+
 
 	public void modifyText(String myLdr){
 		tvLdr.setText(myLdr);
@@ -416,34 +436,33 @@ public class MainActivity extends Activity {
 			switch (msg.what) {
 			case MESSAGE_READ:
 				byte[] readBuf = (byte[]) msg.obj;
-                // construct a string from the valid bytes in the buffer
-                String readMessage = new String(readBuf, 0, msg.arg1);
-				
-				
+				// construct a string from the valid bytes in the buffer
+				String readMessage = new String(readBuf, 0, msg.arg1);
+
+				populateDeviceListView();
 				//String readMessage = (String) msg.obj;
 				Log.v(TAG, readMessage);
 				tvLdr.setText(readMessage);
 				break;
-			case MESSAGE_TOAST:
-				Toast.makeText(getApplicationContext(), msg.getData().getString(TOAST),
-						Toast.LENGTH_SHORT).show();
-				break;
 			case MESSAGE_CONNECT_ARDUINO:
 				ArduinoThread _newArduinoThread = null;
 				BluetoothDevice newDevice = (BluetoothDevice) msg.obj;
-				
+				String devId = newDevice.getName()+"-"+newDevice.getAddress();
+
 				//TODO check that there is no other thread connected with this device
-				
+
 				try {
-					Log.v(TAG, "Trying to connect to "+newDevice.getAddress());
+					Log.v(TAG, "Trying to connect to "+devId);
 					_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
 					_newArduinoThread.start();
 					myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
-					myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, _newArduinoThread).sendToTarget();
-					Log.v(TAG, "Could not create thread for "+newDevice.getAddress());
-					e.printStackTrace();
+					myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
+					Log.v(TAG, "Could not create thread for "+devId);
+					if(_newArduinoThread != null)
+							_newArduinoThread.finalizeThread();
+					//e.printStackTrace();
 				}
 			}
 		}

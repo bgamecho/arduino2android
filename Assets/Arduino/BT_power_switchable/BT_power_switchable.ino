@@ -12,7 +12,7 @@ SoftwareSerial miSerial = SoftwareSerial(rxPin, txPin);
 int ldr =0;
 
 int btPower = 8;
-
+boolean started = false;
 boolean flag_seconds = false;
 int seconds = 0;
 int ticks = 0;
@@ -54,9 +54,11 @@ void loop()
     char command = Serial.read();
     switch(command){
       case 's':
+        started = true;
         digitalWrite(btPower, HIGH);
       break;
       case 'f':
+        started = false;
         digitalWrite(btPower, LOW);
       break;
     }
@@ -65,28 +67,29 @@ void loop()
     Serial.print(command);
     Serial.println("");
     
+    miSerial.print("Rcv: ");
+    miSerial.print(command);
+    miSerial.println("");
+    
   }
   
   if(check_clock()){ 
-    ldr = analogRead(0);
-  
-    miSerial.print("T:");
-    miSerial.print(seconds);
-    miSerial.print("-");
-  
-    miSerial.print("LDR:");
-    miSerial.print(ldr);
-    miSerial.println("");
     
-    /*Serial.print("T:");
+    if(started){
+      ldr = analogRead(0);
     
-    Serial.print("-");
-    Serial.print("LDR:");*/
-    Serial.print(seconds);
-    Serial.print(" ");
-    Serial.print(ldr);
-    Serial.println("");
+      miSerial.print("T:");
+      miSerial.print(seconds);
+      miSerial.print("-");
+      miSerial.print("LDR:");
+      miSerial.print(ldr);
+      miSerial.println("");
 
+      Serial.print(seconds);
+      Serial.print(" ");
+      Serial.print(ldr);
+      Serial.println("");
+    }
   }
   delay(50);
 }

@@ -24,20 +24,20 @@
 
         <Button
             android:id="@+id/buttonConnect"
-            android:layout_weight="1"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="Connect" />
 
         <Button
             android:id="@+id/buttonDisconnect"
-            android:layout_weight="1"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="Disconnect" />
     </LinearLayout>
-    
-        <LinearLayout
+
+    <LinearLayout
         android:id="@+id/m_commandsLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -45,16 +45,16 @@
 
         <Button
             android:id="@+id/buttonStart"
-            android:layout_weight="1"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="command s" />
 
         <Button
             android:id="@+id/buttonFin"
-            android:layout_weight="1"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="command f" />
     </LinearLayout>
 
@@ -94,5 +94,12 @@
                 android:textSize="20sp" />
         </LinearLayout>
     </LinearLayout>
+
+    <ListView
+        android:id="@+id/listViewDevices"
+        android:layout_width="match_parent"
+        android:layout_height="fill_parent"
+        android:layout_weight="1" >
+    </ListView>
 
 </LinearLayout>
