@@ -86,7 +86,6 @@ public class ArduinoThread extends BTDeviceThread{
 		if(connected){
 
 			try {
-
 				bufferIndex = 0;
 				// Read bytes from the stream until we encounter the the start of message character
 				while ( (char)( b = _inStream.read()) != '\n' )

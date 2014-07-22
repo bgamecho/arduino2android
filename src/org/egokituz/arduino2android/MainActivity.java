@@ -37,11 +37,10 @@ public class MainActivity extends Activity {
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	private static final int REQUEST_ENABLE_BT = 1;
 	public static final int MESSAGE_READ = 2;
+
 	public static final int MESSAGE_CONNECT_ARDUINO = 3;
 
 	public static final String TOAST = "toast";
-
-
 
 	Button refreshButton, connectButton, disconnectButton,startButton,finButton;
 	Spinner spinnerBluetooth;
@@ -52,6 +51,7 @@ public class MainActivity extends Activity {
 	private String selected_arduinoMAC;
 
 	private BTManagerThread myBTManagerThread;
+
 	private BatteryMonitorThread myBatteryMonitor;
 
 	private ArduinoThread arduino;
@@ -431,7 +431,6 @@ public class MainActivity extends Activity {
 
 		@Override
 		public void handleMessage(Message msg) {
-			//Bundle myBundle = msg.getData();
 
 			switch (msg.what) {
 			case MESSAGE_READ:
