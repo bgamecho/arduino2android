@@ -8,8 +8,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -17,7 +15,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
+
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -28,10 +26,8 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
-import android.widget.Toast;
 
 /**
  * @author Xabier Gardeazabal
@@ -51,6 +47,8 @@ public class BTManagerThread extends Thread{
 	private Handler mainHandler;
 	private Context mainCtx;
 
+	private ArduinoPlannerThread _discoveryThread;
+
 	private final BluetoothAdapter _BluetoothAdapter;
 
 	// List of currently connected Arduinos (with an independent thread for each) 
@@ -67,32 +65,6 @@ public class BTManagerThread extends Thread{
 	private Map<String,BluetoothDevice> ignoredDevicesList;
 
 	public static BufferedWriter out;
-
-	/**
-	 * Function to initially create the log file and it also writes the time of creation to file.
-	 */
-	private void createFileOnDevice(Boolean append) throws IOException {
-
-		File Root = Environment.getExternalStorageDirectory();
-		if(Root.canWrite()){
-			File  LogFile = new File(Root, "LogXABI.txt");
-			FileWriter LogWriter = new FileWriter(LogFile, append);
-			out = new BufferedWriter(LogWriter);
-			Date date = new Date();
-			out.write("Logged at" + String.valueOf(date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + "\n"));
-			//TODO remember to call out.close() or otherwise it won't write to the file
-		}
-	}
-
-	public void writeToFile(String message){
-		try {
-			createFileOnDevice(true);
-			out.write(message+"\n");
-			out.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
 	public BTManagerThread(Context context, Handler handler) {
 		Log.v(TAG, "BTManagerThread Constructor start");
@@ -130,7 +102,7 @@ public class BTManagerThread extends Thread{
 		IntentFilter filter4 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
 		IntentFilter filter5 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
 		IntentFilter filter6 = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-		
+
 		mainCtx.registerReceiver(myReceiver, filter0);
 		mainCtx.registerReceiver(myReceiver, filter1);
 		mainCtx.registerReceiver(myReceiver, filter2);
@@ -140,91 +112,31 @@ public class BTManagerThread extends Thread{
 		mainCtx.registerReceiver(myReceiver, filter5);
 	}
 
-
-	// The BroadcastReceiver that listens for discovered devices and connected devices
-	// It also listens for connection, discovery and adapter state changes 
-	private final BroadcastReceiver myReceiver = new BroadcastReceiver() {
-		public void onReceive(Context context, Intent intent) {
-			String action = intent.getAction();
-
-			BluetoothDevice device;
-			String deviceName;
-			switch (action){
-			case BluetoothDevice.ACTION_FOUND:
-				//TODO When discovery finds a device
-				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				deviceName = device.getName()+"-"+device.getAddress();
-				if(!newDevicesList.contains(device) && !ignoredDevicesList.containsKey(deviceName)){
-					
-					synchronized (newDevicesList) {
-						newDevicesList.add(device);
-					}
-					Log.v(TAG, "New device found: "+deviceName);
-				}
-
-				break;
-			case BluetoothDevice.ACTION_ACL_CONNECTED:
-				//TODO Low-level (ACL) connection has been established with a remote BT device
-				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				deviceName = device.getName()+"-"+device.getAddress();
-				Log.v(TAG, "connection established with "+deviceName);
-
-				break;
-			case BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED:
-				//TODO ACL disconnection has been requested for a remote device, and it will soon be disconnected. 
-				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				deviceName = device.getName()+"-"+device.getAddress();
-				Log.v(TAG, "Disconnect requested "+deviceName);
-
-				break;
-			case BluetoothDevice.ACTION_ACL_DISCONNECTED:
-				//TODO When a remote device has been disconnected, discard it
-				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				deviceName = device.getName()+"-"+device.getAddress();
-				Log.v(TAG, "Disconnected "+deviceName);
-				finalizeArduinoThread(device.getAddress());
-
-				break;
-
-			case BluetoothAdapter.ACTION_DISCOVERY_STARTED:
-				//TODO When discovery is started
-				Log.v(TAG, "discovery started");
-				break;
-			case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
-				//TODO When discovery is finished
-				Log.v(TAG, "discovery is finished");
-
-				break;
-			case BluetoothAdapter.ACTION_STATE_CHANGED:
-				final int currentState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
-				//TODO check if PREVIOUS_STATE is useful for something
-
-				switch (currentState) {
-				case BluetoothAdapter.STATE_ON:
-					//TODO Bluetooth Adapter was turned ON (enabled)
-					Log.v(TAG, "Bluetooth has been enabled");
-
-					break;
-				case BluetoothAdapter.STATE_OFF:
-					//TODO  Bluetooth Adapter was turned OFF (disabled)
-					Log.v(TAG, "Warning: Bluetooth has been disabled");
-
-					break;
-				case BluetoothAdapter.STATE_TURNING_ON:
-					//TODO check if this is necessary
-					Log.v(TAG, "Bluetooth is turning on");
-
-					break;
-				case BluetoothAdapter.STATE_TURNING_OFF:
-					//TODO Bluetooth adapter is turning off. 
-					//Local clients should immediately attempt graceful disconnection of any remote links
-					Log.v(TAG, "Warning: Bluetooth is turning off");
-
-					break;
-				}
-			}
+	public void writeToFile(String message){
+		try {
+			createFileOnDevice(true);
+			out.write(message+"\n");
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-	};
+	}
+
+	/**
+	 * Function to initially create the log file and it also writes the time of creation to file.
+	 */
+	private void createFileOnDevice(Boolean append) throws IOException {
+
+		File Root = Environment.getExternalStorageDirectory();
+		if(Root.canWrite()){
+			File  LogFile = new File(Root, "LogXABI.txt");
+			FileWriter LogWriter = new FileWriter(LogFile, append);
+			out = new BufferedWriter(LogWriter);
+			Date date = new Date();
+			out.write("Logged at" + String.valueOf(date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + "\n"));
+			//TODO remember to call out.close() or otherwise it won't write to the file
+		}
+	}
 
 	/**
 	 * Handler for receiving commands from the Activities
@@ -266,12 +178,15 @@ public class BTManagerThread extends Thread{
 			case MESSAGE_CONNECTION_LOST:
 				mBundle = msg.getData();
 				MAC =  mBundle.getString("MAC");
-				if(MAC!=null)
-					finalizeArduinoThread(MAC);
+				_discoveryThread.arduinoErrorRecovery(MAC);
+
+				break;
 			case MESSAGE_ERROR_CREATING_BT_THREAD:
 				//TODO what should be done with an Arduino that cannot be connected?
-				//	a) Put it in the ignored devices list?
-				//	b) 
+				// try to recover from the error
+				btDevice = (BluetoothDevice) msg.obj;
+				MAC = btDevice.getAddress();
+				_discoveryThread.arduinoErrorRecovery(MAC);
 
 			default:
 				break;
@@ -280,15 +195,96 @@ public class BTManagerThread extends Thread{
 
 	};
 
-	private void finalizeArduinoThread(String MAC) {
-		for(BTDeviceThread th : myArduinoThreads.values()){
-			String devId = th.getDeviceName()+"-"+th.getDeviceMAC();
-			if(devId.contains(MAC)){
-				Log.v(TAG, "Finalizing thread for "+devId);
-				th.finalizeThread();
+	// The BroadcastReceiver that listens for discovered devices and connected devices
+	// It also listens for connection, discovery and adapter state changes 
+	private final BroadcastReceiver myReceiver = new BroadcastReceiver() {
+		public void onReceive(Context context, Intent intent) {
+			String action = intent.getAction();
+
+			BluetoothDevice device;
+			String deviceName;
+			String devId;
+			switch (action){
+			case BluetoothDevice.ACTION_FOUND:
+				//TODO When discovery finds a device
+				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+				deviceName = device.getName()+"-"+device.getAddress();
+				if(!newDevicesList.contains(device) && !ignoredDevicesList.containsKey(deviceName)){
+
+					synchronized (newDevicesList) {
+						newDevicesList.add(device);
+					}
+					Log.v(TAG, "New device found: "+deviceName);
+				}
+
+				break;
+			case BluetoothDevice.ACTION_ACL_CONNECTED:
+				//TODO Low-level (ACL) connection has been established with a remote BT device
+				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+				deviceName = device.getName()+"-"+device.getAddress();
+				Log.v(TAG, "connection established with "+deviceName);
+
+				break;
+			case BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED:
+				//TODO ACL disconnection has been requested for a remote device, and it will soon be disconnected. 
+				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+				deviceName = device.getName()+"-"+device.getAddress();
+				Log.v(TAG, "Disconnect requested "+deviceName);
+
+				break;
+			case BluetoothDevice.ACTION_ACL_DISCONNECTED:
+				//TODO When a remote device has been disconnected, discard it
+				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+				deviceName = device.getName()+"-"+device.getAddress();
+				Log.v(TAG, "Disconnected "+deviceName);
+				finalizeArduinoThread(device.getAddress());
+				devId = deviceName+"-"+device.getAddress();
+				myArduinoThreads.remove(devId);
+
+				break;
+
+			case BluetoothAdapter.ACTION_DISCOVERY_STARTED:
+				//TODO When discovery is started
+				Log.v(TAG, "discovery started");
+				break;
+			case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
+				//TODO When discovery is finished
+				Log.v(TAG, "discovery is finished");
+				boolean newArduinoAvalable = _discoveryThread.fetchDevices();
+				if(newArduinoAvalable)
+					_discoveryThread.connectAvalaiableArduinos();
+
+				break;
+			case BluetoothAdapter.ACTION_STATE_CHANGED:
+				final int currentState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+				//TODO check if PREVIOUS_STATE is useful for something
+
+				switch (currentState) {
+				case BluetoothAdapter.STATE_ON:
+					//TODO Bluetooth Adapter was turned ON (enabled)
+					Log.v(TAG, "Bluetooth has been enabled");
+
+					break;
+				case BluetoothAdapter.STATE_OFF:
+					//TODO  Bluetooth Adapter was turned OFF (disabled)
+					Log.v(TAG, "Warning: Bluetooth has been disabled");
+
+					break;
+				case BluetoothAdapter.STATE_TURNING_ON:
+					//TODO check if this is necessary
+					Log.v(TAG, "Bluetooth is turning on");
+
+					break;
+				case BluetoothAdapter.STATE_TURNING_OFF:
+					//TODO Bluetooth adapter is turning off. 
+					//Local clients should immediately attempt graceful disconnection of any remote links
+					Log.v(TAG, "Warning: Bluetooth is turning off");
+
+					break;
+				}
 			}
 		}
-	}
+	};
 
 	public String[] getConnectedArduinos(){
 		String[] result = null;
@@ -339,6 +335,16 @@ public class BTManagerThread extends Thread{
 		exit_condition = true;
 	}
 
+	private void finalizeArduinoThread(String MAC) {
+		for(BTDeviceThread th : myArduinoThreads.values()){
+			String devId = th.getDeviceName()+"-"+th.getDeviceMAC();
+			if(devId.contains(MAC)){
+				Log.v(TAG, "Finalizing thread for "+devId);
+				th.finalizeThread();
+			}
+		}
+	}
+
 	private boolean isBTReady(){
 		Log.v(TAG, "isBTReady()");
 		boolean result = false;
@@ -358,16 +364,6 @@ public class BTManagerThread extends Thread{
 		}
 		return result;
 	}
-
-	public void startDiscovery() {
-		Log.v(TAG, "startDiscovery()");
-
-		Discovery discovery = new Discovery((BTManagerThread) this);
-		if(this.isBTReady()){
-			discovery.start();
-		}
-	}
-
 
 	public void stopDiscovery() {
 		Log.v(TAG, "stopDiscovery()");
@@ -389,9 +385,21 @@ public class BTManagerThread extends Thread{
 	@Override
 	public void run() {
 		super.run();
-		startDiscovery();
 
-		while(!exit_condition){}
+		Log.v(TAG, "startDiscovery()");
+
+		_discoveryThread = new ArduinoPlannerThread((BTManagerThread) this);
+		if(this.isBTReady()){
+			_discoveryThread.start();
+		}
+
+		// Get bonded devices (only the first time) 		
+		Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
+		newDevicesList.addAll(bondedDevices);
+
+		while(!exit_condition){
+
+		}
 	}
 
 
@@ -400,14 +408,12 @@ public class BTManagerThread extends Thread{
 	//--------------
 
 
-	private boolean stop_discovery;
 	private boolean exit_condition;
-	private boolean firstDiscovery = true;
 
-	class Discovery extends Thread {
+	private class ArduinoPlannerThread extends Thread {
 		BTManagerThread BTmgr;
 
-		private Discovery(BTManagerThread btMngr) {
+		private ArduinoPlannerThread(BTManagerThread btMngr) {
 			this.BTmgr = btMngr;
 		}
 
@@ -418,32 +424,16 @@ public class BTManagerThread extends Thread{
 				e.printStackTrace();
 			}
 
-			Log.v(TAG, "run() ");
-			//BTmgr.sendInfo(R.string.TDM_LAUNCH, "TDM Launched");
-
 			// Loop to prevent the thread from finalizing and not answering to calls
-			Log.v(TAG, "run: looping until exit condition");
 			long tiempoEspera = 30000; //milisegundos
-			do{
-				//If it's time for a new discovery, and the Bluetooth adapter is enabled
-				if(!stop_discovery){
-					if (_BluetoothAdapter.isEnabled()) {
-						discoverDevice();
-						stop_discovery = true;
-						// Send a runnable to the handler but delay its execution in X seconds
-						mainHandler.postDelayed(new Runnable() {
-							@Override
-							public void run() {
-								//Log.v(TAG, "Tiempo agotado");
-								stop_discovery = false;
-							}
-						}, tiempoEspera);
-					} else{
-						//TODO Bluetooth Adapter is not enabled
-						//Log.v(TAG, "Warning: Couldn't start discovery! Bluetooth is not enabled!");
-					}
-				}
-			}while (!exit_condition);
+
+			while (!exit_condition){
+				_BluetoothAdapter.startDiscovery();	// newDevicesList is updated when ACTION_FOUND
+
+				try {
+					Thread.sleep(tiempoEspera);
+				} catch (InterruptedException e) { e.printStackTrace(); }
+			}
 
 		}
 
@@ -454,49 +444,28 @@ public class BTManagerThread extends Thread{
 		 * 4) Select which devices are our arduinos
 		 * 5) Request connection with each new arduino
 		 */
-		private boolean discoverDevice(){
-			Log.v(TAG, "discoverDevice()");
+		public boolean fetchDevices(){
 			boolean result = false;
-			//newDevicesList.clear();	//TODO Check if this clear() is really necessary
 
-			// 0. Get bonded devices (only the first time) 
-			if(firstDiscovery){
-				Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
-				newDevicesList.addAll(bondedDevices);
-				firstDiscovery = false;
-			}
-
-			//TODO 1. Check if previously bonded devices are no longer bonded (in which case, discard them)
-
-			// 2. Discover devices (new devices are stored in the newDevicesList
-			Log.v(TAG, "startDiscovery() called");
-			_BluetoothAdapter.startDiscovery();	// updates newDevicesList
-			while(_BluetoothAdapter.isDiscovering()){
-			}
-			Log.v(TAG, "startDiscovery() finished");
-
-			// 3. Select which devices are our Arduinos, and put them in the connectableArduinos list
-			connectableArduinos.clear();
-			Iterator<BluetoothDevice> myIterator = newDevicesList.iterator();
-			BluetoothDevice device;
-			
+			// Select which devices are our Arduinos, and put them in the connectableArduinos list			
 			synchronized (newDevicesList) {
 				if (newDevicesList.size() > 0) {
+					BluetoothDevice device;
+					Iterator<BluetoothDevice> myIterator = newDevicesList.iterator();
+
 					while (myIterator.hasNext()) {
 						device = myIterator.next();
-						String deviceId = device.getName() + "-"
-								+ device.getAddress();
+						String deviceId = device.getName()+"-"+device.getAddress();
 
-						if (deviceId.contains("ROBOTICA_")
-								|| deviceId.contains("BT-SENSOR_")) {
+						// Procede only if the device is one of our Arduinos
+						if (deviceId.contains("ROBOTICA_") || deviceId.contains("BT-SENSOR_")) {
 
-							// Discard devices that are already connected, ignored or due for connection 
-							if (!myArduinoThreads.containsKey(deviceId)
-									&& !ignoredDevicesList
-											.containsKey(deviceId)
-									&& !connectableArduinos
-											.containsKey(deviceId)) {
+							// Discard Arduinos that are already connected, ignored or due for connection 
+							if (!myArduinoThreads.containsKey(deviceId) 
+									&& !ignoredDevicesList.containsKey(deviceId)
+									&& !connectableArduinos.containsKey(deviceId)) {
 								connectableArduinos.put(deviceId, device);
+								result = true;
 							}
 						} else if (!ignoredDevicesList.containsKey(deviceId)) {
 							//Put device in the Black-List, as it does not have any interest to us
@@ -505,32 +474,34 @@ public class BTManagerThread extends Thread{
 						}
 					}
 				}
-			}
-			
+			}// synchronized-end
+			Log.v(TAG, "fetchDevices() returns : "+ result);
+			return result;
+		}
 
-			//TODO Preguntarle al usuario mediante un Dialog si quiere emparejar el nuevo dispositivo,
-			// 		y si no quiere emparejarlo, meterlo en la lista ignoredDevicesList 
+		public void connectAvalaiableArduinos(){
 
-			// 5. Request connection with each new arduino
+			// 5. Request connection with each new Arduino
 			if(connectableArduinos.size()>0){
-				result = true;
 				for(BluetoothDevice arduino: connectableArduinos.values()){
 					mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
 				}
+				connectableArduinos.clear();
 			}else{
 				Log.v(TAG, "There isn't any new arduino");
 			}
+		}
 
-			Log.v(TAG, "discoverDevice() returns : "+ result);
+		/**
+		 * This function decides what should be done when a device misbehaves
+		 * @param MAC: the address of the buggy Bluetooth-Arduino device 
+		 */
+		public void arduinoErrorRecovery(String MAC){
 
-			//write to Log
-			writeToFile("discoverDevice() returns : ");
-
-
-			return result;		
+			if(MAC!=null)
+				finalizeArduinoThread(MAC);
 		}
 	}
-
 
 }
 

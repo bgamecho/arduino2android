@@ -3,6 +3,8 @@ package org.egokituz.arduino2android;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -21,19 +23,29 @@ public class ArduinoThread extends BTDeviceThread{
 
 	public String recvLine;
 
-	public ArduinoThread(Handler myHandler, String remoteAddress) throws Exception{
-
+	public ArduinoThread(Handler myHandler, String remoteAddress) throws Exception {
 		super(myHandler);
-
 		this.setName("ArduinoThread");
-
 		super.setupBT(remoteAddress);
-		//super.initComm();
-		super.initComm2();
-
-		if(!this.connected){
-			throw new Exception("could not connect");
+		
+		try {
+			super.initComm2();
+		} catch (IOException e) {
+			if(!this.connected){
+				boolean bonded = false;
+				BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+				for(BluetoothDevice btDev : btAdapter.getBondedDevices()){
+					if(btDev.getAddress().equalsIgnoreCase(remoteAddress))
+						bonded = true;
+				}
+				if(bonded)
+					throw new Exception("could not connect (the device may be out of range or off)");
+				else
+					throw new Exception("could not connect because device is not paired");
+			}
 		}
+
+		
 	}
 
 	@Override

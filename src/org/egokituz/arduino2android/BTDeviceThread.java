@@ -46,6 +46,11 @@ public abstract class BTDeviceThread extends Thread {
 	public String getDeviceMAC(){
 		return _bluetoothDev.getAddress();
 	}
+	
+	public String getDeviceId(){
+		String devId = _bluetoothDev.getName()+"-"+_bluetoothDev.getAddress();
+		return devId;
+	}
 
 	public BluetoothSocket _socket = null;
 	// The robot doesn't provide feedback to the App, only the outStream is needed
@@ -99,15 +104,29 @@ public abstract class BTDeviceThread extends Thread {
 		}
 	}
 
-	public void initComm2(){
+	
+	/** WARNING: This method will block until a connection is made or the connection fails. 
+	 * 	If this method returns without an exception then this socket is now connected.
+	 * 
+	 * Creating new connections to remote Bluetooth devices should not be attempted 
+	 * while device discovery is in progress. Device discovery is a heavyweight procedure 
+	 * on the Bluetooth adapter and will significantly slow a device connection.
+	 * 
+	 * if device is not bonded, an intent will automatically be called and user should enter PIN code
+	 */
+	public void initComm2() throws IOException{
 		try {
 			Method m = _bluetoothDev.getClass().getMethod("createRfcommSocket", new Class[] { int.class });
 			_socket = (BluetoothSocket) m.invoke(_bluetoothDev, 1);
-			_socket.connect();
+
+			_socket.connect(); 
+
 			_inStream = _socket.getInputStream();
 			_outStream = _socket.getOutputStream();
+			
 			if(_socket.isConnected())
 				connected = true;
+			
 		} catch (NoSuchMethodException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -120,49 +139,9 @@ public abstract class BTDeviceThread extends Thread {
 		} catch (InvocationTargetException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			//e.printStackTrace();
 		}
 	}
 
-	/**
-	 * Establish the communication wit the bluetooth device through sockets
-	 */
-	public void initComm() throws Exception{
-
-		try {
-			_socket = _bluetoothDev.createRfcommSocketToServiceRecord(MY_UUID);
-		} catch (IOException e) {
-			Log.e(TAG, "Error connecting in the first attempt");
-			throw new Exception(e);
-		}
-
-		if(_socket==null){
-			Log.e(TAG, "Can't create a socket ");
-			throw new Exception("_socket is null");
-		}
-
-		try {
-			_socket.connect();
-		} catch (IOException e) {
-			Log.e(TAG, "Error connecting with the socket");
-			throw new Exception(e);
-		}
-
-		try {
-			_inStream = _socket.getInputStream();
-			_outStream = _socket.getOutputStream();
-		}catch (Exception e){
-			Log.e(TAG, "Error getting the input/output stream");
-			throw new Exception(e);
-		}
-
-		if(_outStream==null || _inStream==null){
-			Log.e(TAG, "Unable to obtain an _outStream with the device");	
-			throw new Exception("_outStream is null");
-		}
-	}
 
 	/**
 	 * 
@@ -233,19 +212,22 @@ public abstract class BTDeviceThread extends Thread {
 
 	public void connectionLost(){
 		resetConnection();
-		initComm2();
-		if(!connected){
-			String MAC = this.getDeviceMAC();
-			//(BTManagerThread.MESSAGE_CONNECTION_LOST, MAC);
-			if(MAC!=null){
-				Message sendMsg = new Message();
-				Bundle myDataBundle = new Bundle();
-				myDataBundle.putString("MAC", MAC);
-				sendMsg.setData(myDataBundle);
-				sendMsg.what = BTManagerThread.MESSAGE_CONNECTION_LOST;
-				myHandler.sendMessage(sendMsg);
+		try {
+			initComm2();
+			
+			if(!connected){
+					Message sendMsg = new Message();
+					Bundle myDataBundle = new Bundle();
+					myDataBundle.putString("MAC", this.getDeviceMAC());
+					sendMsg.setData(myDataBundle);
+					sendMsg.what = BTManagerThread.MESSAGE_CONNECTION_LOST;
+					myHandler.sendMessage(sendMsg);
 			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+		
 	}
 
 	@Override

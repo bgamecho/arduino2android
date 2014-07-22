@@ -163,24 +163,6 @@ public class MainActivity extends Activity {
 
 	}
 
-	private void populateDeviceListView() {
-		// TODO Auto-generated method stub
-		devicesListView = (ListView) findViewById(R.id.listViewDevices);
-
-		final String[] myDeviceList = getConnectedDevices();
-
-		if(myDeviceList != null){
-			ArrayAdapter<String> listViewArrayAdapter = new ArrayAdapter<String>(this, 
-					android.R.layout.simple_list_item_1, myDeviceList);
-			devicesListView.setAdapter(listViewArrayAdapter);
-		}
-
-
-
-	}
-
-
-
 	@Override 
 	public void onStart(){
 		Log.v(TAG, "Arduino Activity --OnStart()--");
@@ -265,6 +247,22 @@ public class MainActivity extends Activity {
 		}
 	}
 
+	private void populateDeviceListView() {
+		// TODO Auto-generated method stub
+		devicesListView = (ListView) findViewById(R.id.listViewDevices);
+
+		final String[] myDeviceList = getConnectedDevices();
+
+		if(myDeviceList != null){
+			ArrayAdapter<String> listViewArrayAdapter = new ArrayAdapter<String>(this, 
+					android.R.layout.simple_list_item_1, myDeviceList);
+			devicesListView.setAdapter(listViewArrayAdapter);
+		}
+
+
+
+	}
+
 	//Updates the items of the Bluetooth devices' spinner
 	private void updateSpinner(){
 		String[] myDeviceList = this.getBluetoothDevices();
@@ -285,6 +283,20 @@ public class MainActivity extends Activity {
 			this.spinnerBluetooth.setClickable(false);
 	}
 
+
+	private int getIndex(Spinner spinner, String myString){
+
+		int index = 0;
+
+		for (int i=0;i<spinner.getCount();i++){
+			String aux = (String) spinner.getItemAtPosition(i);
+			if (aux.contains(myString)){
+				index = i;
+				continue;
+			}
+		}
+		return index;
+	}
 
 	/**
 	 * 
@@ -365,20 +377,6 @@ public class MainActivity extends Activity {
 
 	}
 
-	private int getIndex(Spinner spinner, String myString){
-
-		int index = 0;
-
-		for (int i=0;i<spinner.getCount();i++){
-			String aux = (String) spinner.getItemAtPosition(i);
-			if (aux.contains(myString)){
-				index = i;
-				continue;
-			}
-		}
-		return index;
-	}
-
 	public String[] getBluetoothDevices(){
 		Log.v(TAG, "discoverDevice()");
 
@@ -440,7 +438,7 @@ public class MainActivity extends Activity {
 				byte[] readBuf = (byte[]) msg.obj;
 				// construct a string from the valid bytes in the buffer
 				String readMessage = new String(readBuf, 0, msg.arg1);
-				
+
 				//Log.v(TAG, readMessage);
 				tvLdr.setText(readMessage);
 				break;
@@ -454,35 +452,36 @@ public class MainActivity extends Activity {
 		}
 
 	};
-	
-	
-	  private class BackgroundThreadDispatcher extends AsyncTask<BluetoothDevice, Void, String> {
 
-			protected String doInBackground(BluetoothDevice... params) {
-	    		ArduinoThread _newArduinoThread = null;
-	    		
-	    		BluetoothDevice newDevice = params[0];
-	    		
-	    		String devId = newDevice.getName()+"-"+newDevice.getAddress();
 
-	    		//TODO check that there is no other thread connected with this device
+	private class BackgroundThreadDispatcher extends AsyncTask<BluetoothDevice, Void, String> {
 
-	    		try {
-	    			Log.v(TAG, "Trying to connect to "+devId);
-	    			_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
-	    			_newArduinoThread.start();
-	    			myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
-	    			return "OK";
-	    		} catch (Exception e) {
-	    			// TODO Auto-generated catch block
-	    			myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
-	    			Log.v(TAG, "Could not create thread for "+devId);
-	    			if(_newArduinoThread != null)
-	    					_newArduinoThread.finalizeThread();
-	    			e.printStackTrace();
-	    			return "OK";
-	    		}
+		protected String doInBackground(BluetoothDevice... params) {
+			ArduinoThread _newArduinoThread = null;
+
+			BluetoothDevice newDevice = params[0];
+
+			String devId = newDevice.getName()+"-"+newDevice.getAddress();
+
+			//TODO check that there is no other thread connected with this device
+
+			try {
+				Log.v(TAG, "Trying to connect to "+devId);
+				_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
+				_newArduinoThread.start();
+				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
+				return "OK";
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
+				Log.v(TAG, "Could not create thread for "+devId);
+				if(_newArduinoThread != null){
+					_newArduinoThread.finalizeThread();
+					e.printStackTrace();
+				}
+				return "OK";
 			}
-	    }
+		}
+	}
 
 }
