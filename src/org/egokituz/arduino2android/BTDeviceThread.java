@@ -283,7 +283,7 @@ public abstract class BTDeviceThread extends Thread {
 			}
 		}
 	}
-	
+
 	public boolean isConnected() {
 		// TODO Auto-generated method stub
 		if(_bluetoothDev.getBondState() == BluetoothDevice.BOND_BONDED)

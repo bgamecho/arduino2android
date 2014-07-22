@@ -5,6 +5,7 @@ import java.util.ArrayList;
 
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
@@ -47,6 +48,25 @@ public class ArduinoThread extends BTDeviceThread{
 	int b = 0;
 	int bufferIndex = 0;
 	int payloadBytesRemaining;
+	
+	
+
+	/* (non-Javadoc)
+	 * @see java.lang.Thread#start()
+	 */
+	@Override
+	public synchronized void start() {
+		// TODO Auto-generated method stub
+		try {
+			int unread = _inStream.available();
+			_inStream.skip(unread);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		super.start();
+		
+	}
 
 	@Override
 	public void loop() {
@@ -76,7 +96,7 @@ public class ArduinoThread extends BTDeviceThread{
 			//}// end the synchronized code
 
 			try {
-				Thread.sleep(100);
+				Thread.sleep(9);
 			} catch (InterruptedException e) {
 				Log.e(TAG, "Error waiting in the loop of the robot");
 				e.printStackTrace();
@@ -87,7 +107,7 @@ public class ArduinoThread extends BTDeviceThread{
 	/**
 	 * Handler for receiving commands from the Activities
 	 */
-	public Handler arduinoHandler = new Handler() {
+	public Handler arduinoHandler = new Handler(Looper.getMainLooper()) {
 		@Override
 		public void handleMessage(Message msg) {
 			Bundle myBundle = msg.getData();

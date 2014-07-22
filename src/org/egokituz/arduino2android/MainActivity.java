@@ -6,8 +6,10 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -438,36 +440,49 @@ public class MainActivity extends Activity {
 				byte[] readBuf = (byte[]) msg.obj;
 				// construct a string from the valid bytes in the buffer
 				String readMessage = new String(readBuf, 0, msg.arg1);
-
-				populateDeviceListView();
-				//String readMessage = (String) msg.obj;
-				Log.v(TAG, readMessage);
+				
+				//Log.v(TAG, readMessage);
 				tvLdr.setText(readMessage);
 				break;
 			case MESSAGE_CONNECT_ARDUINO:
-				ArduinoThread _newArduinoThread = null;
 				BluetoothDevice newDevice = (BluetoothDevice) msg.obj;
-				String devId = newDevice.getName()+"-"+newDevice.getAddress();
-
-				//TODO check that there is no other thread connected with this device
-
-				try {
-					Log.v(TAG, "Trying to connect to "+devId);
-					_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
-					_newArduinoThread.start();
-					myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
-					Log.v(TAG, "Could not create thread for "+devId);
-					if(_newArduinoThread != null)
-							_newArduinoThread.finalizeThread();
-					//e.printStackTrace();
-				}
+				Log.v(TAG, "Dispatching thread creation for "+newDevice.getName());
+				BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
+				thDispatcher.execute(newDevice);
+				populateDeviceListView();
 			}
 		}
 
 	};
+	
+	
+	  private class BackgroundThreadDispatcher extends AsyncTask<BluetoothDevice, Void, String> {
 
+			protected String doInBackground(BluetoothDevice... params) {
+	    		ArduinoThread _newArduinoThread = null;
+	    		
+	    		BluetoothDevice newDevice = params[0];
+	    		
+	    		String devId = newDevice.getName()+"-"+newDevice.getAddress();
+
+	    		//TODO check that there is no other thread connected with this device
+
+	    		try {
+	    			Log.v(TAG, "Trying to connect to "+devId);
+	    			_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
+	    			_newArduinoThread.start();
+	    			myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
+	    			return "OK";
+	    		} catch (Exception e) {
+	    			// TODO Auto-generated catch block
+	    			myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
+	    			Log.v(TAG, "Could not create thread for "+devId);
+	    			if(_newArduinoThread != null)
+	    					_newArduinoThread.finalizeThread();
+	    			e.printStackTrace();
+	    			return "OK";
+	    		}
+			}
+	    }
 
 }

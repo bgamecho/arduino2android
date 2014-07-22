@@ -28,6 +28,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.widget.Toast;
@@ -122,20 +123,21 @@ public class BTManagerThread extends Thread{
 
 		// Register the BroadcastReceivers
 		// When finalizing, remember to remove the ones that are not needed!
-		IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+		IntentFilter filter0 = new IntentFilter(BluetoothDevice.ACTION_FOUND);
 		IntentFilter filter1 = new IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED);
 		IntentFilter filter2 = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
 		IntentFilter filter3 = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-		IntentFilter filter4 = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
-		IntentFilter filter5 = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-		IntentFilter filter6 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-		mainCtx.registerReceiver(myReceiver, filter);
+		IntentFilter filter4 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+		IntentFilter filter5 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+		IntentFilter filter6 = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+		
+		mainCtx.registerReceiver(myReceiver, filter0);
 		mainCtx.registerReceiver(myReceiver, filter1);
 		mainCtx.registerReceiver(myReceiver, filter2);
 		mainCtx.registerReceiver(myReceiver, filter3);
+		mainCtx.registerReceiver(myReceiver, filter6);
 		mainCtx.registerReceiver(myReceiver, filter4);
 		mainCtx.registerReceiver(myReceiver, filter5);
-		mainCtx.registerReceiver(myReceiver, filter6);
 	}
 
 
@@ -318,7 +320,7 @@ public class BTManagerThread extends Thread{
 		Log.v(TAG, "finalize()");
 		//TODO poner a null receivers
 
-		//Finalizar threads
+		//Finalize Arduino threads
 		for(BTDeviceThread th : myArduinoThreads.values()){
 			th.finalizeThread();
 		}
@@ -336,8 +338,6 @@ public class BTManagerThread extends Thread{
 		}
 		exit_condition = true;
 	}
-
-
 
 	private boolean isBTReady(){
 		Log.v(TAG, "isBTReady()");
@@ -469,9 +469,11 @@ public class BTManagerThread extends Thread{
 			//TODO 1. Check if previously bonded devices are no longer bonded (in which case, discard them)
 
 			// 2. Discover devices (new devices are stored in the newDevicesList
+			Log.v(TAG, "startDiscovery() called");
 			_BluetoothAdapter.startDiscovery();	// updates newDevicesList
 			while(_BluetoothAdapter.isDiscovering()){
 			}
+			Log.v(TAG, "startDiscovery() finished");
 
 			// 3. Select which devices are our Arduinos, and put them in the connectableArduinos list
 			connectableArduinos.clear();
