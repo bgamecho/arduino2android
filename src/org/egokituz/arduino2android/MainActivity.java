@@ -1,7 +1,9 @@
 package org.egokituz.arduino2android;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Set;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -215,6 +217,7 @@ public class MainActivity extends Activity {
 
 		//Finalize threads
 		myBTManagerThread.finalize();
+		myBatteryMonitor.finalize();
 	}
 
 
@@ -429,16 +432,25 @@ public class MainActivity extends Activity {
 	 */
 	public Handler arduinoHandler = new Handler() {
 
+		@SuppressLint("NewApi")
 		@Override
 		public void handleMessage(Message msg) {
 
 			switch (msg.what) {
 			case MESSAGE_READ:
 				byte[] readBuf = (byte[]) msg.obj;
+				
+				//String rawMessage = new String(readBuf, 0, msg.arg1);
+				//Log.v(TAG, "Raw message: "+rawMessage);
+				
+				//byte[] b = rawMessage.getBytes(Charset.forName("UTF-8"));
+				//byte[] b = rawMessage.getBytes();
+				//MessageReading msgReading = new MessageReading(b);
+				MessageReading msgReading = new MessageReading(readBuf);
+				String readMessage = msgReading.getMessage();
 				// construct a string from the valid bytes in the buffer
-				String readMessage = new String(readBuf, 0, msg.arg1);
 
-				//Log.v(TAG, readMessage);
+				Log.v(TAG, "Payload: "+readMessage);
 				tvLdr.setText(readMessage);
 				break;
 			case MESSAGE_CONNECT_ARDUINO:
@@ -449,7 +461,6 @@ public class MainActivity extends Activity {
 				populateDeviceListView();
 			}
 		}
-
 	};
 
 
@@ -480,6 +491,41 @@ public class MainActivity extends Activity {
 				}
 				return "OK";
 			}
+		}
+	}
+	
+	private class MessageReading{
+		private static final String TAG = "MessageReading";
+
+		byte stx;
+		byte msgId;
+		byte dlc;
+		String payload;
+		byte etx;
+		
+		public MessageReading(byte[] buffer) {
+			int bufferIndex = 0;
+
+			try {
+				stx 				= buffer[bufferIndex++];
+				msgId 				= buffer[bufferIndex++];
+				dlc 				= buffer[bufferIndex++];
+				payload = new String(buffer, bufferIndex++, --dlc);
+				etx = buffer[bufferIndex];
+				
+			} catch (Exception e) {
+				/*
+				 * An exception should only happen if the buffer is too short and we walk off the end of the bytes,
+				 * because of the way we read the bytes from the device this should never happen, but just in case
+				 * we'll catch the exception
+				 */
+				e.printStackTrace();
+				Log.d(TAG, "Failure building MessageReading from byte buffer, probably an incopmplete or corrupted buffer");
+			}
+		}
+
+		public String getMessage() {
+			return payload;
 		}
 	}
 

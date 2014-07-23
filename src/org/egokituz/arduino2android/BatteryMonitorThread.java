@@ -67,10 +67,7 @@ public class BatteryMonitorThread extends Thread{
 		while(!exit_condition){}
 	}
 
-	@Override
-	protected void finalize() throws Throwable {
-		// TODO Auto-generated method stub
-		super.finalize();
+	protected void finalize() {
 		mainCtx.unregisterReceiver(myReceiver);
 		exit_condition = true;
 	}

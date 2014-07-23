@@ -1,4 +1,4 @@
-#include <avr/interrupt.h>  
+#include <avr/interrupt.h>
 #include <avr/io.h>
 #include <SoftwareSerial.h>
 
@@ -16,6 +16,11 @@ boolean started = false;
 boolean flag_seconds = false;
 int seconds = 0;
 int ticks = 0;
+
+int STX = 0x02;
+int MSGID = 0x26;
+int DLC = 55;
+int ETX = 0x03;
 
 void setup()
 {
@@ -44,10 +49,6 @@ void loop()
   if(miSerial.available()){
     Serial.write(miSerial.read());
   }
-  /*
-  if(Serial.available()){
-    miSerial.write(Serial.read());
-  } */ 
   
   // Info from BT is displayed in Comm1
   if (Serial.available()){
@@ -67,28 +68,38 @@ void loop()
     Serial.print(command);
     Serial.println("");
     
+    /*
     miSerial.print("Rcv: ");
     miSerial.print(command);
     miSerial.println("");
-    
+    */
   }
   
   if(check_clock()){ 
     
     if(started){
       ldr = analogRead(0);
-    
-      miSerial.print("T:");
-      miSerial.print(seconds);
-      miSerial.print("-");
-      miSerial.print("LDR:");
-      miSerial.print(ldr);
-      miSerial.println("");
+      
+      String payload = "T:";
+      payload+= seconds;
+      payload+= "-LDR:";
+      payload+=ldr;
+      payload+='#';
+      int length = payload.length()+1;
+      
+      char aux[length];
+      payload.toCharArray(aux, length);
 
-      Serial.print(seconds);
-      Serial.print(" ");
-      Serial.print(ldr);
-      Serial.println("");
+      miSerial.write(STX);
+      miSerial.write(MSGID);
+      miSerial.write(length);
+      miSerial.write(aux);
+      miSerial.write(ETX);
+      
+      Serial.print(length);
+      Serial.print(": ");
+      Serial.println(aux);
+
     }
   }
   delay(50);

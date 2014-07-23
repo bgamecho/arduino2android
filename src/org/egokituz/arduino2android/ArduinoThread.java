@@ -53,22 +53,13 @@ public class ArduinoThread extends BTDeviceThread{
 		recvLine = "";
 	}
 
-
-	byte[] buffer = new byte[1024];
-	int bytes;
-	String currentCommand;
-	int b = 0;
-	int bufferIndex = 0;
-	int payloadBytesRemaining;
-	
-	
-
 	/* (non-Javadoc)
 	 * @see java.lang.Thread#start()
 	 */
 	@Override
 	public synchronized void start() {
-		// TODO Auto-generated method stub
+		super.start();
+		
 		try {
 			int unread = _inStream.available();
 			_inStream.skip(unread);
@@ -76,10 +67,88 @@ public class ArduinoThread extends BTDeviceThread{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		super.start();
-		
+	}
+	
+    private final int STX = 0x02;
+    private final int MSGID = 0x26;
+    private int DLC = 55;
+    private final int ETX = 0x03;
+
+	private byte[] buffer = new byte[1024];
+	private int b = 0;
+	private int bufferIndex = 0;
+	private int payloadBytesRemaining;
+
+	@Override
+	public void loop() {
+        // Keep listening to the InputStream while connected
+		if(connected){
+
+			try {
+				//Log.v(TAG, "Reading message");
+
+				bufferIndex = 0;
+				
+				// Read bytes from the stream until we encounter the the start of message character
+            	while (( b = _inStream.read()) != STX ) {
+            		Log.v(TAG, "Waiting for "+STX+". Read: "+b);
+        		}
+            	
+            	buffer[bufferIndex++] = (byte) b;
+            	
+            	// The next byte must be the message ID, see the basic message format in the document 
+            	if ((b = _inStream.read()) != MSGID ){
+            		Log.v(TAG, "MSGID incorrect. Received: "+b+". Expected"+MSGID);
+            	}
+            	buffer[bufferIndex++] = (byte) b; //MSGID
+            	
+            	// The next byte must be the expected data length code
+            	b = _inStream.read();
+            	buffer[bufferIndex++] = (byte) b; //DLC
+            	DLC = b;
+            	payloadBytesRemaining = --b;
+            	
+            	//Log.v(TAG, "Expected payload length: "+DLC+" bytes");
+            	
+            	while ( (payloadBytesRemaining--) > 0 ) {
+            		buffer[bufferIndex++] = (byte) (b = _inStream.read());
+            		//Log.v(TAG, "Read payload byte "+b);
+            		//Log.v(TAG, "Payload bytes remaining: "+payloadBytesRemaining);
+            	}
+
+            	// The next byte must be the end of text indicator 
+            	if ((b = _inStream.read()) != ETX ){
+            		Log.v(TAG, "ETX incorrect. Received: "+b+". Expected"+ETX);
+            	}
+
+               	buffer[bufferIndex] = (byte) b;
+                           	
+                //Log.d(TAG, "ArduinoThread: read "+Integer.toString(bufferIndex)+" bytes");
+
+				byte[] auxBuff = new byte[bufferIndex];
+				System.arraycopy(buffer, 0, auxBuff, 0, bufferIndex);
+				myHandler.obtainMessage(MainActivity.MESSAGE_READ, bufferIndex, -1, auxBuff)
+				.sendToTarget();
+
+			} catch (IOException e) {
+				Log.e(TAG, "IOException reading socket for "+_bluetoothDev.getName());
+				e.printStackTrace();
+				connectionLost();
+			} catch (ArrayIndexOutOfBoundsException e){
+				Log.e(TAG, "Message lost. Received too much data");
+			}
+			//}// end the synchronized code
+
+			try {
+				Thread.sleep(9);
+			} catch (InterruptedException e) {
+				Log.e(TAG, "Error waiting in the loop of the robot");
+				e.printStackTrace();
+			}
+		}
 	}
 
+	/** Backup loop
 	@Override
 	public void loop() {
 		//synchronized(this){
@@ -113,8 +182,8 @@ public class ArduinoThread extends BTDeviceThread{
 				e.printStackTrace();
 			}
 		}
-	}
-
+	}*/
+	
 	/**
 	 * Handler for receiving commands from the Activities
 	 */
