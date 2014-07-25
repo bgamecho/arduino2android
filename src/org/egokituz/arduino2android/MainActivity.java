@@ -78,9 +78,9 @@ public class MainActivity extends Activity {
 	
 	private Float batteryLoad;
 
-	private BTManagerThread myBTManagerThread;
-	private BatteryMonitorThread myBatteryMonitor;
-	private LoggerThread myLogger;
+	private BTManagerThread _BTManager;
+	private BatteryMonitorThread _BatteryMonitor;
+	private LoggerThread _Logger;
 
 	private ArduinoThread arduino;
 	boolean ardionoOn;
@@ -99,9 +99,9 @@ public class MainActivity extends Activity {
 		populateDeviceListView();
 		updateSpinner();
 
-		myBTManagerThread = new BTManagerThread(this, arduinoHandler);
-		myBatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
-		myLogger = new LoggerThread(this, arduinoHandler);
+		_BTManager = new BTManagerThread(this, arduinoHandler);
+		_BatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
+		_Logger = new LoggerThread(this, arduinoHandler);
 
 	}
 
@@ -195,10 +195,10 @@ public class MainActivity extends Activity {
 	@Override 
 	public void onStart(){
 		Log.v(TAG, "Arduino Activity --OnStart()--");
-		if(!myBTManagerThread.isAlive())
-			myBTManagerThread.start();
-		if(!myBatteryMonitor.isAlive())
-			myBatteryMonitor.start();
+		if(!_BTManager.isAlive())
+			_BTManager.start();
+		if(!_BatteryMonitor.isAlive())
+			_BatteryMonitor.start();
 		super.onStart();
 	}
 
@@ -243,8 +243,12 @@ public class MainActivity extends Activity {
 		super.onDestroy();
 
 		//Finalize threads
-		myBTManagerThread.finalize();
-		myBatteryMonitor.finalize();
+		if(!finishApp){
+		_BTManager.finalize();
+		_BatteryMonitor.finalize();
+		_Logger.finalize();
+		}
+		finishApp = true;
 	}
 
 
@@ -252,9 +256,14 @@ public class MainActivity extends Activity {
 	public void finish() {
 		Log.v(TAG, "Arduino Activity --OnDestroy()--");
 		super.finish();
-		// Finalize threads
-		myBTManagerThread.finalize();
-		myBatteryMonitor.finalize();
+
+		//Finalize threads
+		if(!finishApp){
+		_BTManager.finalize();
+		_BatteryMonitor.finalize();
+		_Logger.finalize();
+		}
+		finishApp = true;
 	}
 
 
@@ -278,8 +287,10 @@ public class MainActivity extends Activity {
 		}
 	}
 
+	/**
+	 * Updates the ListView containing the connected Arduinos
+	 */
 	private void populateDeviceListView() {
-		// TODO Auto-generated method stub
 		devicesListView = (ListView) findViewById(R.id.listViewDevices);
 
 		final String[] myDeviceList = getConnectedDevices();
@@ -298,6 +309,10 @@ public class MainActivity extends Activity {
 	private void updateSpinner(){
 		String[] myDeviceList = this.getBluetoothDevices();
 
+		if(myDeviceList!=null){
+			
+
+	
 		for(int i=0;i<myDeviceList.length; i++){
 			if(!myDeviceList[i].startsWith("BT-") || !myDeviceList[i].startsWith("ROB") )
 				myDeviceList[i].length();
@@ -312,6 +327,8 @@ public class MainActivity extends Activity {
 			this.spinnerBluetooth.setClickable(true);
 		}else
 			this.spinnerBluetooth.setClickable(false);
+		
+		}
 	}
 
 
@@ -334,7 +351,7 @@ public class MainActivity extends Activity {
 	 */
 	public void connectToArduino(){
 		try {
-			arduino = new ArduinoThread(arduinoHandler, selected_arduinoMAC);
+			arduino = new ArduinoThread(arduinoHandler, _BTManager.btHandler, selected_arduinoMAC);
 			arduino.start();
 			ardionoOn = true;
 
@@ -401,7 +418,7 @@ public class MainActivity extends Activity {
 			//				e.printStackTrace();
 			//			}
 			// Obtain the handler from the Thread and send the command in a Bundle
-			myBTManagerThread.btHandler.sendMessage(sendMsg);
+			_BTManager.btHandler.sendMessage(sendMsg);
 			//arduino.getHandler().sendMessage(sendMsg);
 			//Log.v(TAG, "Command "+str+" sent");
 
@@ -449,8 +466,8 @@ public class MainActivity extends Activity {
 	public String[] getConnectedDevices(){
 		String[] result = null;
 
-		if(myBTManagerThread != null && myBTManagerThread.isAlive())
-			result = myBTManagerThread.getConnectedArduinos();
+		if(_BTManager != null && _BTManager.isAlive())
+			result = _BTManager.getConnectedArduinos();
 		return result;
 
 	}
@@ -460,10 +477,8 @@ public class MainActivity extends Activity {
 		tvLdr.setText(myLdr);
 	}
 
-	private int previousTime = 0;
-	
 	/**
-	 * Handler connected with the bluetooth devices Threads: 
+	 * Handler connected with the BTManager Threads: 
 	 */
 	public Handler arduinoHandler = new Handler() {
 
@@ -486,8 +501,9 @@ public class MainActivity extends Activity {
 				MessageReading msgReading = new MessageReading(readBuf);
 				
 				// TODO write to log file
-
-				Log.v(TAG, timestamp+" "+devName+" "+elapsedMilis+"ms "+bytes+" bytes");
+				String logMsg = timestamp+" "+devName+" "+elapsedMilis+"ms "+bytes+" bytes";
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_TO_LOG_FILE, logMsg).sendToTarget();
+				
 				//tvLdr.setText(readMessage);
 				break;
 			case MESSAGE_CONNECT_ARDUINO:
@@ -498,7 +514,8 @@ public class MainActivity extends Activity {
 				Log.v(TAG, "Dispatching thread creation for "+newDevice.getName());
 				BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
 				thDispatcher.execute(newDevice);
-
+				
+				break;
 			case MESSAGE_BATTERY_STATE_CHANGED:
 				// Message received from the Battery-Monitor Thread
 				// This message implies that a the Battery percentage has changed
@@ -535,17 +552,15 @@ public class MainActivity extends Activity {
 
 			try {
 				Log.v(TAG, "Trying to connect to "+devId);
-				_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
+				_newArduinoThread = new ArduinoThread(arduinoHandler, _BTManager.btHandler, newDevice.getAddress());
 				_newArduinoThread.start();
 				
-				populateDeviceListView(); // Update the ListView containing the connected Arduinos
-				
 				// Notify the Bluetooth Manager that the requested thread has been successfully created 
-				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
+				_BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
 				return "OK";
 			} catch (Exception e) {
 				// Notify the Bluetooth Manager that the requested thread could not be created
-				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
+				_BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
 				Log.v(TAG, "Could not create thread for "+devId);
 				if(_newArduinoThread != null){
 					_newArduinoThread.finalizeThread();
@@ -554,6 +569,16 @@ public class MainActivity extends Activity {
 				return "ERROR";
 			}
 		}
+
+
+		@Override
+		protected void onPostExecute(String result) {
+			super.onPostExecute(result);
+			// Update the ListView containing the connected Arduinos
+			//populateDeviceListView();
+		}
+		
+		
 	}
 
 	/**

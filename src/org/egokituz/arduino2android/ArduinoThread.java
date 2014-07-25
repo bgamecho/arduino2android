@@ -50,11 +50,12 @@ public class ArduinoThread extends BTDeviceThread{
 	 * New ArduinoThread that handles the connection with an Arduino with the provided MAC address
 	 * It writes and reads data to/from the connected socket of the device
 	 * @param myHandler
+	 * @param btMngrHandler 
 	 * @param macAddress
 	 * @throws Exception
 	 */
-	public ArduinoThread(Handler myHandler, String macAddress) throws Exception {
-		super(myHandler); // BTDeviceThread Constructor 
+	public ArduinoThread(Handler myHandler, Handler btMngrHandler, String macAddress) throws Exception {
+		super(myHandler, btMngrHandler); // BTDeviceThread Constructor 
 		this.setName("ArduinoThread"); // Set this thread's name
 		super.setupBT(macAddress); // try to get the default Bluetooth adapter and remote device
 
@@ -194,20 +195,20 @@ public class ArduinoThread extends BTDeviceThread{
 				System.arraycopy(buffer, 0, auxBuff, 0, bufferIndex);
 
 				// Notify the main activity that a message was read 
-				Message sendMsg = myHandler.obtainMessage(MainActivity.MESSAGE_READ, (int) elapsedTime, bufferIndex, auxBuff);
+				Message sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_READ, (int) elapsedTime, bufferIndex, auxBuff);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putString("NAME", this.getDeviceName());
 				myDataBundle.putString("MAC", this.getDeviceMAC());
-				myDataBundle.putString("TIMESTAMP", timestamp.format("H%:M%:S"));
+				myDataBundle.putString("TIMESTAMP", timestamp.format("%H:%M:%S"));
 				sendMsg.setData(myDataBundle);
 				sendMsg.sendToTarget();
 
 			} catch (IOException e) {
 				Log.e(TAG, "IOException reading socket for "+myBluetoothDevice.getName());
-				e.printStackTrace();
+				//e.printStackTrace();
 				
 				// Notify the Bluetooth Manager Thread that the connection was lost, and let it decide the recovery process
-				Message sendMsg = myHandler.obtainMessage(BTManagerThread.MESSAGE_CONNECTION_LOST, (int) elapsedTime, bufferIndex, this);
+				Message sendMsg = btMngrHandler.obtainMessage(BTManagerThread.MESSAGE_CONNECTION_LOST, (int) elapsedTime, bufferIndex, this);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putString("NAME", this.getDeviceName());
 				myDataBundle.putString("MAC", this.getDeviceMAC());

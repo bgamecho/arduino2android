@@ -52,7 +52,8 @@ public abstract class BTDeviceThread extends Thread {
 	protected boolean beforeStart;
 	protected boolean connected;
 
-	Handler myHandler;
+	protected Handler mainHandler;
+	protected Handler btMngrHandler;
 	
 	protected String devName, devMac;
 
@@ -62,17 +63,21 @@ public abstract class BTDeviceThread extends Thread {
 	protected InputStream _inStream = null;
 	protected OutputStream _outStream = null;
 
+
+
 	/**
 	 * New abstract BTDeviceThread
 	 * @param myHandler
+	 * @param btMngrHandler 
 	 * @throws Exception 
 	 */
-	public BTDeviceThread(Handler myHandler){
+	public BTDeviceThread(Handler myHandler, Handler btMngrHandler){
 		this.setName(TAG);
 		terminateFlag = false;
 		beforeStart = true;
 		connected=false;
-		this.myHandler = myHandler;
+		this.mainHandler = myHandler;
+		this.btMngrHandler = btMngrHandler;
 	}
 	
 	public BluetoothDevice getBluetoothDevice() {
@@ -98,7 +103,7 @@ public abstract class BTDeviceThread extends Thread {
 		Bundle myDataBundle = new Bundle();
 		myDataBundle.putString(code,value);
 		msg.setData(myDataBundle);
-		myHandler.sendMessage(msg);  
+		mainHandler.sendMessage(msg);  
 	}
 
 	/**

@@ -79,8 +79,6 @@ public class BTManagerThread extends Thread{
 	// List of ignored devices that should never be used 
 	private Map<String,BluetoothDevice> ignoredDevicesList;
 
-	public static BufferedWriter out;
-
 	/**
 	 * New BTManagerThread that manages the phone's Bluetooth antenna.
 	 * It also manages the connection state of the connected devices' threads
@@ -333,16 +331,14 @@ public class BTManagerThread extends Thread{
 		}
 
 		Log.v(TAG, "Unregistering receiver");
-		mainCtx.unregisterReceiver(myReceiver);
-		Log.v(TAG, "receiver unregistered");
-
 		try {
-			Log.v(TAG, "Writing to log...");
-			out.close(); //TODO until out.close() the log messages won't be written to the file
-		} catch (IOException e) {
+			mainCtx.unregisterReceiver(myReceiver);
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		Log.v(TAG, "receiver unregistered");
+
 		exit_condition = true;
 	}
 
@@ -374,12 +370,6 @@ public class BTManagerThread extends Thread{
 			}
 		}
 		return result;
-	}
-
-	public void stopDiscovery() {
-		Log.v(TAG, "stopDiscovery()");
-
-		mainCtx.unregisterReceiver(myReceiver);
 	}
 
 	@Override
