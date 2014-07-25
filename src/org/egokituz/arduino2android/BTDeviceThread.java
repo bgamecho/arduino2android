@@ -1,3 +1,23 @@
+/**
+ * Copyright (C) 2014 Xabier Gardeazabal
+ * 				Euskal Herriko Unibertsitatea
+ * 				University of The Basque Country
+ *              xgardeazabal@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package org.egokituz.arduino2android;
 
 import java.io.IOException;
@@ -28,52 +48,50 @@ public abstract class BTDeviceThread extends Thread {
 	//TODO check if this is ok for all Bluetooth devices
 	private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
-	boolean terminateFlag;
-	boolean beforeStart;
-	boolean connected;
+	protected boolean terminateFlag;
+	protected boolean beforeStart;
+	protected boolean connected;
 
 	Handler myHandler;
-
-
-	public BluetoothDevice _bluetoothDev = null;
-
-	public BluetoothDevice getBluetoothDevice() {
-		return _bluetoothDev;
-	}
-	public String getDeviceName() {
-		return _bluetoothDev.getName();
-	}
-	public String getDeviceMAC(){
-		return _bluetoothDev.getAddress();
-	}
 	
-	public String getDeviceId(){
-		String devId = _bluetoothDev.getName()+"-"+_bluetoothDev.getAddress();
-		return devId;
-	}
+	protected String devName, devMac;
 
-	public BluetoothSocket _socket = null;
-	// The robot doesn't provide feedback to the App, only the outStream is needed
-	public InputStream _inStream = null;
-	public OutputStream _outStream = null;
-
+	protected BluetoothDevice myBluetoothDevice = null;
+	
+	protected BluetoothSocket _socket = null;
+	protected InputStream _inStream = null;
+	protected OutputStream _outStream = null;
 
 	/**
-	 * 
+	 * New abstract BTDeviceThread
 	 * @param myHandler
 	 * @throws Exception 
 	 */
-	public BTDeviceThread(Handler myHandler) throws Exception{
+	public BTDeviceThread(Handler myHandler){
+		this.setName(TAG);
 		terminateFlag = false;
 		beforeStart = true;
 		connected=false;
 		this.myHandler = myHandler;
 	}
+	
+	public BluetoothDevice getBluetoothDevice() {
+		return myBluetoothDevice;
+	}
+	public String getDeviceName() {
+		return devName;
+	}
+	public String getDeviceMAC(){
+		return devMac;
+	}
+	public String getDeviceId(){
+		return devName+"-"+devMac;
+	}
 
 	/**
-	 * Send messages to the class from we received the myHandler
-	 * @param code
-	 * @param value
+	 * Send messages to the class from we received the myHandler handler
+	 * @param code: message code
+	 * @param value: message value
 	 */
 	public void sendMessage(String code, String value){
 		Message msg = new Message();
@@ -84,27 +102,31 @@ public abstract class BTDeviceThread extends Thread {
 	}
 
 	/**
-	 * Looks for the robot in Paired Devices List
+	 * Looks for the device in Paired Devices List
 	 *  TODO Upgrade this method to discover new devices, etc...
+	 * @throws Exception "mBluetoothAdapter is null"
+	 * @throws Exception "_bluetoothDev is null" 
 	 */
-	public void setupBT(String macAddress) throws Exception{
+	protected void setupBT(String macAddress) throws Exception {
 
 		final BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
 
 		if(btAdapter==null){
+			//  Bluetooth is not supported on this hardware platform 
 			Log.e(TAG, "BT Adapter is not available");
 			throw new Exception("mBluetoothAdapter is null");
 		}
 
-		_bluetoothDev = btAdapter.getRemoteDevice(macAddress);
+		myBluetoothDevice = btAdapter.getRemoteDevice(macAddress);
+		devName = myBluetoothDevice.getName();
+		devMac = myBluetoothDevice.getAddress();
 
-		if(_bluetoothDev == null){
+		if(myBluetoothDevice == null){
 			Log.e(TAG, "Can't obtain a device with that address");
 			throw new Exception("_bluetoothDev is null");
 		}
 	}
 
-	
 	/** WARNING: This method will block until a connection is made or the connection fails. 
 	 * 	If this method returns without an exception then this socket is now connected.
 	 * 
@@ -114,19 +136,19 @@ public abstract class BTDeviceThread extends Thread {
 	 * 
 	 * if device is not bonded, an intent will automatically be called and user should enter PIN code
 	 */
-	public void initComm2() throws IOException{
+	public void openConnection() throws IOException{
 		try {
-			Method m = _bluetoothDev.getClass().getMethod("createRfcommSocket", new Class[] { int.class });
-			_socket = (BluetoothSocket) m.invoke(_bluetoothDev, 1);
+			Method m = myBluetoothDevice.getClass().getMethod("createRfcommSocket", new Class[] { int.class });
+			_socket = (BluetoothSocket) m.invoke(myBluetoothDevice, 1);
 
 			_socket.connect(); 
 
 			_inStream = _socket.getInputStream();
 			_outStream = _socket.getOutputStream();
-			
+
 			if(_socket.isConnected())
 				connected = true;
-			
+
 		} catch (NoSuchMethodException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -144,7 +166,7 @@ public abstract class BTDeviceThread extends Thread {
 
 
 	/**
-	 * 
+	 * Sets "beforeStart" flag to false
 	 */
 	public void initialize(){
 		beforeStart = false;
@@ -153,27 +175,23 @@ public abstract class BTDeviceThread extends Thread {
 	/**
 	 * 
 	 */
-	public abstract void loop();
+	protected abstract void loop();
 
 	/**
-	 * 
+	 * Close this thread by liberating resources
 	 */
 	public void close(){
 
 		// After the threads ends close the connection and release the socket connection 
 		resetConnection();
-		//		try {
-		//			_inStream.close();
-		//			_outStream.close();
-		//			_socket.close();
-		//		} catch (IOException e) {
-		//			Log.e(TAG, "Closing the connection with the Robot");
-		//			e.printStackTrace();
-		//		}
 
 		this.sendMessage("OFF", this.getName());
 	}
 
+	/**
+	 * Resets the connection: closes input & output streams and the socket.
+	 * Warning: this function will block until the socket is disconnected.
+	 */
 	private void resetConnection() {
 		Log.v(TAG, "resetConnection()");
 		if (_inStream != null) {
@@ -203,33 +221,17 @@ public abstract class BTDeviceThread extends Thread {
 				e.printStackTrace();
 			}
 			while(_socket.isConnected()){
-				//Do nothing
+				// Wait until socket is disconnected completely
 			}
 			_socket = null;
 			connected = false;
 		}
 	}
 
-	public void connectionLost(){
-		resetConnection();
-		try {
-			initComm2();
-			
-			if(!connected){
-					Message sendMsg = new Message();
-					Bundle myDataBundle = new Bundle();
-					myDataBundle.putString("MAC", this.getDeviceMAC());
-					sendMsg.setData(myDataBundle);
-					sendMsg.what = BTManagerThread.MESSAGE_CONNECTION_LOST;
-					myHandler.sendMessage(sendMsg);
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-	}
 
+	/**
+	 * Main run
+	 */
 	@Override
 	public void run() {
 		initialize();
@@ -268,7 +270,7 @@ public abstract class BTDeviceThread extends Thread {
 
 	public boolean isConnected() {
 		// TODO Auto-generated method stub
-		if(_bluetoothDev.getBondState() == BluetoothDevice.BOND_BONDED)
+		if(myBluetoothDevice.getBondState() == BluetoothDevice.BOND_BONDED)
 			return true;
 		return false;
 	}

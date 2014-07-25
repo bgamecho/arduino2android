@@ -1,8 +1,34 @@
+/**
+ * Copyright (C) 2014 Xabier Gardeazabal
+ * 				Euskal Herriko Unibertsitatea
+ * 				University of The Basque Country
+ *              xgardeazabal@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+
 package org.egokituz.arduino2android;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -27,9 +53,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 /**
- * 
  * @author xgardeazabal
- *
  */
 public class MainActivity extends Activity {
 
@@ -39,9 +63,9 @@ public class MainActivity extends Activity {
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	private static final int REQUEST_ENABLE_BT = 1;
 	public static final int MESSAGE_READ = 2;
-
 	public static final int MESSAGE_CONNECT_ARDUINO = 3;
-
+	protected static final int MESSAGE_BATTERY_STATE_CHANGED = 4;
+	
 	public static final String TOAST = "toast";
 
 	Button refreshButton, connectButton, disconnectButton,startButton,finButton;
@@ -51,10 +75,12 @@ public class MainActivity extends Activity {
 	TextView tvLdr;
 
 	private String selected_arduinoMAC;
+	
+	private Float batteryLoad;
 
 	private BTManagerThread myBTManagerThread;
-
 	private BatteryMonitorThread myBatteryMonitor;
+	private LoggerThread myLogger;
 
 	private ArduinoThread arduino;
 	boolean ardionoOn;
@@ -75,6 +101,7 @@ public class MainActivity extends Activity {
 
 		myBTManagerThread = new BTManagerThread(this, arduinoHandler);
 		myBatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
+		myLogger = new LoggerThread(this, arduinoHandler);
 
 	}
 
@@ -225,8 +252,9 @@ public class MainActivity extends Activity {
 	public void finish() {
 		Log.v(TAG, "Arduino Activity --OnDestroy()--");
 		super.finish();
-		//Finalize threads
+		// Finalize threads
 		myBTManagerThread.finalize();
+		myBatteryMonitor.finalize();
 	}
 
 
@@ -352,9 +380,10 @@ public class MainActivity extends Activity {
 	}
 
 	/**
-	 * Send data to the Arduibo Thread
+	 * Notifies to the Bluetooth-Manager thread's handler by the MESSAGE_SEND_COMMAND.
+	 * This then sends the data to the Arduino Thread, which will finally write it to the socket.
 	 * 
-	 * @param str command for the arduino
+	 * @param str command for the Arduino
 	 */
 	public void sendCommandArduino(String str) {
 
@@ -380,8 +409,8 @@ public class MainActivity extends Activity {
 
 	}
 
+	// TODO delete this function
 	public String[] getBluetoothDevices(){
-		Log.v(TAG, "discoverDevice()");
 
 		String[] result = null;
 		ArrayList<String> devices = new ArrayList<String>(); 
@@ -412,7 +441,11 @@ public class MainActivity extends Activity {
 		return result;
 
 	}
-
+	
+	/**
+	 * Inquires the Bluetooth-Manager for the currently connected Arduino devices. 
+	 * @return String[] array with the connected device IDs (name-MAC)
+	 */
 	public String[] getConnectedDevices(){
 		String[] result = null;
 
@@ -427,6 +460,8 @@ public class MainActivity extends Activity {
 		tvLdr.setText(myLdr);
 	}
 
+	private int previousTime = 0;
+	
 	/**
 	 * Handler connected with the bluetooth devices Threads: 
 	 */
@@ -438,62 +473,95 @@ public class MainActivity extends Activity {
 
 			switch (msg.what) {
 			case MESSAGE_READ:
+				// Message received from a running Arduino Thread
+				// This message implies that a well formed message was read by an Arduino Thread
+				
 				byte[] readBuf = (byte[]) msg.obj;
-				
-				//String rawMessage = new String(readBuf, 0, msg.arg1);
-				//Log.v(TAG, "Raw message: "+rawMessage);
-				
-				//byte[] b = rawMessage.getBytes(Charset.forName("UTF-8"));
-				//byte[] b = rawMessage.getBytes();
-				//MessageReading msgReading = new MessageReading(b);
-				MessageReading msgReading = new MessageReading(readBuf);
-				String readMessage = msgReading.getMessage();
-				// construct a string from the valid bytes in the buffer
+				int elapsedMilis = msg.arg1;
+				int bytes = msg.arg2;
+				String devName =  msg.getData().getString("NAME");
+				String devMAC =  msg.getData().getString("MAC");
+				String timestamp = msg.getData().getString("TIMESTAMP");
 
-				Log.v(TAG, "Payload: "+readMessage);
-				tvLdr.setText(readMessage);
+				MessageReading msgReading = new MessageReading(readBuf);
+				
+				// TODO write to log file
+
+				Log.v(TAG, timestamp+" "+devName+" "+elapsedMilis+"ms "+bytes+" bytes");
+				//tvLdr.setText(readMessage);
 				break;
 			case MESSAGE_CONNECT_ARDUINO:
+				// Message received from the Bluetooth-Manager Thread
+				// This message implies that a request to create an Arduino Thread
+				
 				BluetoothDevice newDevice = (BluetoothDevice) msg.obj;
 				Log.v(TAG, "Dispatching thread creation for "+newDevice.getName());
 				BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
 				thDispatcher.execute(newDevice);
-				populateDeviceListView();
+
+			case MESSAGE_BATTERY_STATE_CHANGED:
+				// Message received from the Battery-Monitor Thread
+				// This message implies that a the Battery percentage has changed
+				
+				batteryLoad = (Float) msg.obj;
+				
+				//TODO call the Logger to write the battery load
+				
+				break;
 			}
 		}
 	};
 
 
+	// ------------------------------------------//
+	// NESTED CLASS: BackgroundThreadDispatcher  //
+	// ------------------------------------------//
+	/**
+	 * @author Xabier Gardeazabal
+	 * 
+	 * This performs an ArduinoThread thread creation without blocking the UI 
+	 */
 	private class BackgroundThreadDispatcher extends AsyncTask<BluetoothDevice, Void, String> {
 
 		protected String doInBackground(BluetoothDevice... params) {
+			Thread.currentThread().setName("ThreadDispatcher");
 			ArduinoThread _newArduinoThread = null;
 
 			BluetoothDevice newDevice = params[0];
 
 			String devId = newDevice.getName()+"-"+newDevice.getAddress();
 
-			//TODO check that there is no other thread connected with this device
+			//TODO check that there is no other thread connected with this device??
 
 			try {
 				Log.v(TAG, "Trying to connect to "+devId);
 				_newArduinoThread = new ArduinoThread(arduinoHandler, newDevice.getAddress());
 				_newArduinoThread.start();
+				
+				populateDeviceListView(); // Update the ListView containing the connected Arduinos
+				
+				// Notify the Bluetooth Manager that the requested thread has been successfully created 
 				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
 				return "OK";
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
+				// Notify the Bluetooth Manager that the requested thread could not be created
 				myBTManagerThread.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
 				Log.v(TAG, "Could not create thread for "+devId);
 				if(_newArduinoThread != null){
 					_newArduinoThread.finalizeThread();
 					e.printStackTrace();
 				}
-				return "OK";
+				return "ERROR";
 			}
 		}
 	}
-	
+
+	/**
+	 * @author Xabier Gardeazabal
+	 *
+	 * This class builds a message according to the specified message format
+	 * and retrieves the different fields 
+	 */
 	private class MessageReading{
 		private static final String TAG = "MessageReading";
 
@@ -502,7 +570,10 @@ public class MainActivity extends Activity {
 		byte dlc;
 		String payload;
 		byte etx;
-		
+		byte crc_bytes[] = new byte[8];
+		long crc;
+	    //private ByteBuffer auxBuffer = ByteBuffer.allocate(Long.SIZE);    
+
 		public MessageReading(byte[] buffer) {
 			int bufferIndex = 0;
 
@@ -510,22 +581,54 @@ public class MainActivity extends Activity {
 				stx 				= buffer[bufferIndex++];
 				msgId 				= buffer[bufferIndex++];
 				dlc 				= buffer[bufferIndex++];
-				payload = new String(buffer, bufferIndex++, --dlc);
+				payload = new String(buffer, bufferIndex, --dlc);
+				bufferIndex+=dlc;
+				crc_bytes [0]= buffer[bufferIndex++];
+				crc_bytes [1]= buffer[bufferIndex++];
+				crc_bytes [2]= buffer[bufferIndex++];
+				crc_bytes [3]= buffer[bufferIndex++];
 				etx = buffer[bufferIndex];
+
+			    ByteBuffer auxBuffer = ByteBuffer.wrap(crc_bytes);
+			    auxBuffer = ByteBuffer.wrap(crc_bytes);
+			    auxBuffer.order(ByteOrder.LITTLE_ENDIAN);
+			    crc = auxBuffer.getLong();
 				
+				long checksum = getChecksum(payload.getBytes());
+
+				if(checksum != crc)
+					Log.e(TAG, "Payload contains erros: orig."+crc+" calc."+checksum);
+
 			} catch (Exception e) {
-				/*
-				 * An exception should only happen if the buffer is too short and we walk off the end of the bytes,
-				 * because of the way we read the bytes from the device this should never happen, but just in case
-				 * we'll catch the exception
-				 */
+				/* An exception should only happen if the buffer is too short and we walk off the end of the bytes.
+				 * Because of the way we read the bytes from the device this should never happen, but just in case
+				 * we'll catch the exception */
 				e.printStackTrace();
 				Log.d(TAG, "Failure building MessageReading from byte buffer, probably an incopmplete or corrupted buffer");
 			}
 		}
 
-		public String getMessage() {
+		public String getPayload() {
 			return payload;
+		}
+
+		/**
+		 * Calculates the CRC (Cyclic Redundancy Check) checksum value of the given bytes
+		 * according to the CRC32 algorithm.
+		 * @param bytes 
+		 * @return The CRC32 checksum
+		 */
+		private long getChecksum(byte bytes[]){
+
+			Checksum checksum = new CRC32();
+
+			// update the current checksum with the specified array of bytes
+			checksum.update(bytes, 0, bytes.length);
+
+			// get the current checksum value
+			long checksumValue = checksum.getValue();
+
+			return checksumValue;
 		}
 	}
 

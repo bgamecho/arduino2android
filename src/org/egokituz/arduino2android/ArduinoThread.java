@@ -1,19 +1,42 @@
+/**
+ * Copyright (C) 2014 Xabier Gardeazabal
+ * 				Euskal Herriko Unibertsitatea
+ * 				University of The Basque Country
+ *              xgardeazabal@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package org.egokituz.arduino2android;
 
 import java.io.IOException;
-import java.util.ArrayList;
-
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.SystemClock;
+import android.text.format.Time;
 import android.util.Log;
 
 /**
  *  
- * @author bgamecho
+ * @author Xabier Gardeazabal
+ * 
+ * Each thread of this Class handles the connection with an Arduino
+ * It writes and reads data to/from the socket 
  *
  */
 public class ArduinoThread extends BTDeviceThread{
@@ -23,19 +46,26 @@ public class ArduinoThread extends BTDeviceThread{
 
 	public String recvLine;
 
-	public ArduinoThread(Handler myHandler, String remoteAddress) throws Exception {
-		super(myHandler);
-		this.setName("ArduinoThread");
-		super.setupBT(remoteAddress);
-		
+	/**
+	 * New ArduinoThread that handles the connection with an Arduino with the provided MAC address
+	 * It writes and reads data to/from the connected socket of the device
+	 * @param myHandler
+	 * @param macAddress
+	 * @throws Exception
+	 */
+	public ArduinoThread(Handler myHandler, String macAddress) throws Exception {
+		super(myHandler); // BTDeviceThread Constructor 
+		this.setName("ArduinoThread"); // Set this thread's name
+		super.setupBT(macAddress); // try to get the default Bluetooth adapter and remote device
+
 		try {
-			super.initComm2();
+			super.openConnection();
 		} catch (IOException e) {
 			if(!this.connected){
 				boolean bonded = false;
 				BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
 				for(BluetoothDevice btDev : btAdapter.getBondedDevices()){
-					if(btDev.getAddress().equalsIgnoreCase(remoteAddress))
+					if(btDev.getAddress().equalsIgnoreCase(macAddress))
 						bonded = true;
 				}
 				if(bonded)
@@ -44,9 +74,24 @@ public class ArduinoThread extends BTDeviceThread{
 					throw new Exception("could not connect because device is not paired");
 			}
 		}
-
-		
 	}
+	
+	/**
+	 * Handler for receiving commands from the Activities
+	 */
+	private Handler arduinoHandler = new Handler(Looper.getMainLooper()) {
+		@Override
+		public void handleMessage(Message msg) {
+			Bundle myBundle = msg.getData();
+
+			if(myBundle.containsKey("COMMAND")){
+				String cmd = myBundle.getString("COMMAND");
+				synchronized(this){	
+					write(cmd);
+				}
+			}
+		}
+	};
 
 	@Override
 	public void initialize() {
@@ -59,7 +104,7 @@ public class ArduinoThread extends BTDeviceThread{
 	@Override
 	public synchronized void start() {
 		super.start();
-		
+
 		try {
 			int unread = _inStream.available();
 			_inStream.skip(unread);
@@ -68,148 +113,134 @@ public class ArduinoThread extends BTDeviceThread{
 			e.printStackTrace();
 		}
 	}
-	
-    private final int STX = 0x02;
-    private final int MSGID = 0x26;
-    private int DLC = 55;
-    private final int ETX = 0x03;
 
-	private byte[] buffer = new byte[1024];
-	private int b = 0;
+	private final int STX = 0x02; // Start of Text flag 
+	private final int MSGID_PING = 0x26; // Message ID: ping type
+	private final int MSGID_DATA = 0x27; // Message ID: Data type
+	private final int ETX = 0x03; // End of Text flag
+
+	private byte[] buffer = new byte[1024]; // Read buffer
+	private int b = 0; // Read byte
 	private int bufferIndex = 0;
-	private int payloadBytesRemaining;
+	private int payloadBytesRemaining; // DLC parameter counter (received payload length)
+	private long prevRealtime = 0, elapsedRealTime, elapsedTime;
+	private Time timestamp;
 
+
+	/**
+	 * Reads from input-stream socket
+	 * When a well formed message is read, sends a MESSAGE_READ message 
+	 * through the Main Activity's handler.
+	 */
 	@Override
-	public void loop() {
-        // Keep listening to the InputStream while connected
+	protected void loop() {
+		// Keep listening to the InputStream while connected
 		if(connected){
 
 			try {
-				//Log.v(TAG, "Reading message");
-
+				buffer = new byte[1024];
 				bufferIndex = 0;
-				
+
 				// Read bytes from the stream until we encounter the the start of message character
-            	while (( b = _inStream.read()) != STX ) {
-            		Log.v(TAG, "Waiting for "+STX+". Read: "+b);
-        		}
-            	
-            	buffer[bufferIndex++] = (byte) b;
-            	
-            	// The next byte must be the message ID, see the basic message format in the document 
-            	if ((b = _inStream.read()) != MSGID ){
-            		Log.v(TAG, "MSGID incorrect. Received: "+b+". Expected"+MSGID);
-            	}
-            	buffer[bufferIndex++] = (byte) b; //MSGID
-            	
-            	// The next byte must be the expected data length code
-            	b = _inStream.read();
-            	buffer[bufferIndex++] = (byte) b; //DLC
-            	DLC = b;
-            	payloadBytesRemaining = --b;
-            	
-            	//Log.v(TAG, "Expected payload length: "+DLC+" bytes");
-            	
-            	while ( (payloadBytesRemaining--) > 0 ) {
-            		buffer[bufferIndex++] = (byte) (b = _inStream.read());
-            		//Log.v(TAG, "Read payload byte "+b);
-            		//Log.v(TAG, "Payload bytes remaining: "+payloadBytesRemaining);
-            	}
+				while (( b = _inStream.read()) != STX ) {
+					// Keep looking for STX
+					Log.v(TAG, "Waiting for "+STX+". Read: "+b);
+				}
 
-            	// The next byte must be the end of text indicator 
-            	if ((b = _inStream.read()) != ETX ){
-            		Log.v(TAG, "ETX incorrect. Received: "+b+". Expected"+ETX);
-            	}
+				Time timestamp = new Time();
+				timestamp.setToNow();
+				
+				elapsedRealTime =  SystemClock.elapsedRealtime();
+				elapsedTime = elapsedRealTime - prevRealtime;
+				prevRealtime = elapsedRealTime;
 
-               	buffer[bufferIndex] = (byte) b;
-                           	
-                //Log.d(TAG, "ArduinoThread: read "+Integer.toString(bufferIndex)+" bytes");
+				buffer[bufferIndex++] = (byte) b; // append STX at the beginning of the buffer  
+
+				// The next byte must be the message ID, see the basic message format in the document
+				b = _inStream.read();
+				if (b != MSGID_PING && b != MSGID_DATA){
+					Log.v(TAG, "Unexpected MSGID. Received: "+ b);
+				}
+				buffer[bufferIndex++] = (byte) b; // append MSGID
+
+				// The next byte must be the expected data length code
+				b = _inStream.read();
+				buffer[bufferIndex++] = (byte) b; //DLC
+
+				payloadBytesRemaining = --b; // Arduino UNO's problem?? WTF
+				//payloadBytesRemaining = b;
+
+				//Log.v(TAG, "Expected payload length: "+DLC+" bytes");
+
+				while ( (payloadBytesRemaining--) > 0 ) {
+					buffer[bufferIndex++] = (byte) (b = _inStream.read());
+				}
+
+				//The next four bytes must be the checksum
+				for(int i=0; i<4; i++)
+					buffer[bufferIndex++] = (byte) (b = _inStream.read());
+
+				// The next byte must be the end of text indicator 
+				if ((b = _inStream.read()) != ETX ){
+					Log.e(TAG, "ETX incorrect. Received: "+b+". Expected"+ETX);
+					//return;
+				}
+
+				buffer[bufferIndex++] = (byte) b; // append ETX at the end of the buffer 
+
+				//Log.d(TAG, "ArduinoThread: read "+Integer.toString(bufferIndex)+" bytes");
 
 				byte[] auxBuff = new byte[bufferIndex];
 				System.arraycopy(buffer, 0, auxBuff, 0, bufferIndex);
-				myHandler.obtainMessage(MainActivity.MESSAGE_READ, bufferIndex, -1, auxBuff)
-				.sendToTarget();
+
+				// Notify the main activity that a message was read 
+				Message sendMsg = myHandler.obtainMessage(MainActivity.MESSAGE_READ, (int) elapsedTime, bufferIndex, auxBuff);
+				Bundle myDataBundle = new Bundle();
+				myDataBundle.putString("NAME", this.getDeviceName());
+				myDataBundle.putString("MAC", this.getDeviceMAC());
+				myDataBundle.putString("TIMESTAMP", timestamp.format("H%:M%:S"));
+				sendMsg.setData(myDataBundle);
+				sendMsg.sendToTarget();
 
 			} catch (IOException e) {
-				Log.e(TAG, "IOException reading socket for "+_bluetoothDev.getName());
+				Log.e(TAG, "IOException reading socket for "+myBluetoothDevice.getName());
 				e.printStackTrace();
-				connectionLost();
+				
+				// Notify the Bluetooth Manager Thread that the connection was lost, and let it decide the recovery process
+				Message sendMsg = myHandler.obtainMessage(BTManagerThread.MESSAGE_CONNECTION_LOST, (int) elapsedTime, bufferIndex, this);
+				Bundle myDataBundle = new Bundle();
+				myDataBundle.putString("NAME", this.getDeviceName());
+				myDataBundle.putString("MAC", this.getDeviceMAC());
+				sendMsg.setData(myDataBundle);
+				sendMsg.sendToTarget();
+
 			} catch (ArrayIndexOutOfBoundsException e){
 				Log.e(TAG, "Message lost. Received too much data");
+				e.printStackTrace();
 			}
-			//}// end the synchronized code
-
+			
+			/*
 			try {
 				Thread.sleep(9);
 			} catch (InterruptedException e) {
-				Log.e(TAG, "Error waiting in the loop of the robot");
+				Log.e(TAG, "Error waiting in the loop of the ArduinoThread");
 				e.printStackTrace();
-			}
+			}*/
 		}
 	}
 
-	/** Backup loop
-	@Override
-	public void loop() {
-		//synchronized(this){
-		if(connected){
-
-			try {
-				bufferIndex = 0;
-				// Read bytes from the stream until we encounter the the start of message character
-				while ( (char)( b = _inStream.read()) != '\n' )
-					buffer[bufferIndex++] = (byte) b;
-
-				byte[] auxBuff = new byte[--bufferIndex];
-				System.arraycopy(buffer, 0, auxBuff, 0, bufferIndex);
-				myHandler.obtainMessage(MainActivity.MESSAGE_READ, bufferIndex, -1, auxBuff)
-				.sendToTarget();
-
-			} catch (IOException e) {
-				Log.e(TAG, "IOException reading socket for "+_bluetoothDev.getName());
-				e.printStackTrace();
-				connectionLost();
-			} catch (Exception e){
-				Log.e(TAG, "Exception reading socket for "+_bluetoothDev.getName());
-				e.printStackTrace();
-			}
-			//}// end the synchronized code
-
-			try {
-				Thread.sleep(9);
-			} catch (InterruptedException e) {
-				Log.e(TAG, "Error waiting in the loop of the robot");
-				e.printStackTrace();
-			}
-		}
-	}*/
-	
 	/**
-	 * Handler for receiving commands from the Activities
-	 */
-	public Handler arduinoHandler = new Handler(Looper.getMainLooper()) {
-		@Override
-		public void handleMessage(Message msg) {
-			Bundle myBundle = msg.getData();
-
-			if(myBundle.containsKey("COMMAND")){
-				String cmd = myBundle.getString("COMMAND");
-				synchronized(this){	
-					//commandArray.add(cmd);
-					write(cmd);
-				}
-			}
-		}
-	};
-
-	/**
-	 * Get the handler to send messages to the robot
+	 * Gets the handler to send messages to the robot
 	 * @return handler 
 	 */
 	public Handler getHandler(){
 		return arduinoHandler;
 	}
 
+	/**
+	 * Sends a command to the connected Arduino via Bluetooth socket
+	 * @param cmd: Command to send to the Arduino
+	 */
 	protected void write(String cmd) {
 
 		buffer = cmd.getBytes();

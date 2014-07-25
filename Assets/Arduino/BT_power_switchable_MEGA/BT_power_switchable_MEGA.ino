@@ -3,11 +3,6 @@
 #include <SoftwareSerial.h>
 #include <avr/pgmspace.h>
 
-#define rxPin 2
-#define txPin 3
-
-// Configura un nuevo puerto serie
-SoftwareSerial miSerial = SoftwareSerial(rxPin, txPin);
 
 //A0 (Analog 0) pin is an Light Diode Resistor (LDR)
 int ldr =0;
@@ -37,7 +32,7 @@ void setup()
   TCCR2B = 0x05;        //Timer2 Control Reg B: Timer Prescaler set to 128
   
   Serial.begin(57600);
-  miSerial.begin(57600);
+  Serial1.begin(57600);
 
   // initialize the digital pin as an output.
   pinMode(btPower, OUTPUT);
@@ -48,8 +43,8 @@ void loop()
 {
 
   // Echo all incoming Bluetooth data (for PING tests)
-  if(miSerial.available()){
-    incomingByte = miSerial.read();
+  if(Serial1.available()){
+    incomingByte = Serial1.read();
     
     char aux[1] = {incomingByte};
     sendMessage(MSGID_PING, aux, 2);
@@ -108,12 +103,12 @@ void sendMessage(int MSGID, char payload[], int length){
   memcpy(buf,&crc,sizeof(long int));
 
   
-  miSerial.write(STX);
-  miSerial.write(MSGID);
-  miSerial.write(length);
-  miSerial.write(payload);
-  miSerial.write(buf,sizeof(buf));
-  miSerial.write(ETX);
+  Serial1.write(STX);
+  Serial1.write(MSGID);
+  Serial1.write(length);
+  Serial1.write(payload);
+  Serial1.write(buf,sizeof(buf));
+  Serial1.write(ETX);
   
   Serial.print(length);
   Serial.print(": ");

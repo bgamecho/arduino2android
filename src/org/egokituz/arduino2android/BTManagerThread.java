@@ -1,7 +1,23 @@
 /**
- * This class manages the phone's Bluetooth antenna
- * For each device discovered, it launches an "ArduinoThread" thread 
+ * Copyright (C) 2014 Xabier Gardeazabal
+ * 				Euskal Herriko Unibertsitatea
+ * 				University of The Basque Country
+ *              xgardeazabal@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
+
 package org.egokituz.arduino2android;
 
 import java.io.BufferedWriter;
@@ -31,7 +47,6 @@ import android.util.Log;
 
 /**
  * @author Xabier Gardeazabal
- *
  */
 public class BTManagerThread extends Thread{
 
@@ -66,19 +81,19 @@ public class BTManagerThread extends Thread{
 
 	public static BufferedWriter out;
 
+	/**
+	 * New BTManagerThread that manages the phone's Bluetooth antenna.
+	 * It also manages the connection state of the connected devices' threads
+	 * For each device discovered, it launches an "ArduinoThread" thread
+	 * @param context
+	 * @param handler
+	 */
 	public BTManagerThread(Context context, Handler handler) {
+		this.setName(TAG);
 		Log.v(TAG, "BTManagerThread Constructor start");
 
 		mainHandler = handler;
 		mainCtx = context;
-
-		//set log to write/append file
-		try {
-			createFileOnDevice(false);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 
 		//TODO set BLUETOOTH
 		_BluetoothAdapter = BluetoothAdapter.getDefaultAdapter();    
@@ -112,31 +127,7 @@ public class BTManagerThread extends Thread{
 		mainCtx.registerReceiver(myReceiver, filter5);
 	}
 
-	public void writeToFile(String message){
-		try {
-			createFileOnDevice(true);
-			out.write(message+"\n");
-			out.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
-	/**
-	 * Function to initially create the log file and it also writes the time of creation to file.
-	 */
-	private void createFileOnDevice(Boolean append) throws IOException {
-
-		File Root = Environment.getExternalStorageDirectory();
-		if(Root.canWrite()){
-			File  LogFile = new File(Root, "LogXABI.txt");
-			FileWriter LogWriter = new FileWriter(LogFile, append);
-			out = new BufferedWriter(LogWriter);
-			Date date = new Date();
-			out.write("Logged at" + String.valueOf(date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + "\n"));
-			//TODO remember to call out.close() or otherwise it won't write to the file
-		}
-	}
 
 	/**
 	 * Handler for receiving commands from the Activities
@@ -146,26 +137,56 @@ public class BTManagerThread extends Thread{
 		public void handleMessage(Message msg) {
 			ArduinoThread arduinoTh;
 			Bundle mBundle;
-			String devId;
-			String MAC;
+			String devName, devId, devMAC;
 			BluetoothDevice btDevice;
-
 
 			switch (msg.what) {
 			case MESSAGE_BT_THREAD_CREATED:
+				// Message received from Main Activity
+				// This message implies that the Main Activity has created the requested thread
+				
 				arduinoTh = (ArduinoThread) msg.obj;
-				btDevice = arduinoTh.getBluetoothDevice(); 
-				devId = btDevice.getName()+"-"+btDevice.getAddress();
+				btDevice = arduinoTh.getBluetoothDevice();
+				devName = btDevice.getName();
+				devMAC = btDevice.getAddress();
+				devId = devName+"-"+devMAC;
 				myArduinoThreads.put(devId, arduinoTh);
-				Log.v(TAG, "Thread was successfully created");
+				Log.v(TAG, "Thread created for "+devName);
 				break;
+
+			case MESSAGE_ERROR_CREATING_BT_THREAD:
+				// Message received from Main Activity
+				// This message implies that the Main Activity could not create the requested thread
+				
+				//TODO what should be done with an Arduino that cannot be connected?
+				// try to recover from the error
+				btDevice = (BluetoothDevice) msg.obj;
+				devMAC = btDevice.getAddress();
+				break;
+
+			case MESSAGE_CONNECTION_LOST:
+				// Message received from a running Arduino Thread
+				// This message implies that an error occurred while reading or writing to the socket
+				
+				mBundle = msg.getData();
+				devName = mBundle.getString("NAME");
+				devMAC =  mBundle.getString("MAC");
+				arduinoTh = (ArduinoThread) msg.obj;
+				_discoveryThread.arduinoErrorRecovery(devName, devMAC, arduinoTh);
+
+				break;
+
+
 			case MESSAGE_SEND_COMMAND:
+				// Message received from the Main Activiy
+				// This message implies a request to write to the socket of a running Arduino
+				
 				mBundle = msg.getData();
 				String command = mBundle.getString("COMMAND");
-				MAC =  mBundle.getString("MAC");
+				devMAC =  mBundle.getString("MAC");
 
 				for(BTDeviceThread th : myArduinoThreads.values()){
-					if(th.getDeviceMAC().equals(MAC)){
+					if(th.getDeviceMAC().equals(devMAC)){
 						Message sendMsg = new Message();
 						Bundle myDataBundle = new Bundle();
 						myDataBundle.putString("COMMAND", command);
@@ -175,24 +196,11 @@ public class BTManagerThread extends Thread{
 					}
 				}
 				break;
-			case MESSAGE_CONNECTION_LOST:
-				mBundle = msg.getData();
-				MAC =  mBundle.getString("MAC");
-				_discoveryThread.arduinoErrorRecovery(MAC);
-
-				break;
-			case MESSAGE_ERROR_CREATING_BT_THREAD:
-				//TODO what should be done with an Arduino that cannot be connected?
-				// try to recover from the error
-				btDevice = (BluetoothDevice) msg.obj;
-				MAC = btDevice.getAddress();
-				_discoveryThread.arduinoErrorRecovery(MAC);
-
 			default:
+				Log.e(TAG, "Unknown message received: "+msg.what);
 				break;
 			}
 		}
-
 	};
 
 	// The BroadcastReceiver that listens for discovered devices and connected devices
@@ -214,7 +222,7 @@ public class BTManagerThread extends Thread{
 					synchronized (newDevicesList) {
 						newDevicesList.add(device);
 					}
-					Log.v(TAG, "New device found: "+deviceName);
+					//Log.v(TAG, "New device found: "+deviceName);
 				}
 
 				break;
@@ -285,7 +293,7 @@ public class BTManagerThread extends Thread{
 			}
 		}
 	};
-
+	
 	public String[] getConnectedArduinos(){
 		String[] result = null;
 		ArrayList<String> devices = new ArrayList<String>(); 
@@ -312,6 +320,9 @@ public class BTManagerThread extends Thread{
 		mainHandler.sendMessage(msg);  
 	}
 
+	/**
+	 * Stops the thread in a safe way
+	 */
 	public void finalize(){
 		Log.v(TAG, "finalize()");
 		//TODO poner a null receivers
@@ -404,16 +415,28 @@ public class BTManagerThread extends Thread{
 
 
 	//--------------
-	//NESTED CLASS
+	//NESTED CLASS: ArduinoPlannerThread 
 	//--------------
-
 
 	private boolean exit_condition;
 
+	/**
+	 * @author Xabier Gardeazabal
+	 *
+	 * This class represents the Planner, and manages the timing of the following phases: 
+	 * +Bluetooth discovery
+	 * +Arduino devices' connection setup
+	 * +Connected Arduino devices' error handling  
+	 */
 	private class ArduinoPlannerThread extends Thread {
 		BTManagerThread BTmgr;
 
+		/**
+		 * 
+		 * @param btMngr BTManagerThread 
+		 */
 		private ArduinoPlannerThread(BTManagerThread btMngr) {
+			this.setName("ArduinoPlanner");
 			this.BTmgr = btMngr;
 		}
 
@@ -425,7 +448,7 @@ public class BTManagerThread extends Thread{
 			}
 
 			// Loop to prevent the thread from finalizing and not answering to calls
-			long tiempoEspera = 30000; //milisegundos
+			long tiempoEspera = 30000; //miliseconds
 
 			while (!exit_condition){
 				_BluetoothAdapter.startDiscovery();	// newDevicesList is updated when ACTION_FOUND
@@ -437,12 +460,14 @@ public class BTManagerThread extends Thread{
 
 		}
 
-		/** 
-		 * 1) Look for bonded devices
-		 * 2) Discard devices that have been bonded but are no longer
-		 * 3) Discover new devices
-		 * 4) Select which devices are our arduinos
-		 * 5) Request connection with each new arduino
+
+		/**
+		 * Checks if new devices have been found by the last Bluetooth discovery.
+		 * For each new device, checks if its name happens to meet with our Arduinos.
+		 * If it does, it stores it as connectable, for later use.
+		 * If it does not, the device is ignored.
+		 * 
+		 * @return true if a new Arduino is connectable
 		 */
 		public boolean fetchDevices(){
 			boolean result = false;
@@ -469,19 +494,18 @@ public class BTManagerThread extends Thread{
 							}
 						} else if (!ignoredDevicesList.containsKey(deviceId)) {
 							//Put device in the Black-List, as it does not have any interest to us
-							Log.v(TAG, "Ignoring device " + deviceId);
+							//Log.v(TAG, "Ignoring device " + deviceId);
 							ignoredDevicesList.put(deviceId, device);
 						}
 					}
 				}
 			}// synchronized-end
-			Log.v(TAG, "fetchDevices() returns : "+ result);
 			return result;
 		}
 
 		public void connectAvalaiableArduinos(){
 
-			// 5. Request connection with each new Arduino
+			// Request connection with each connectable Arduino device
 			if(connectableArduinos.size()>0){
 				for(BluetoothDevice arduino: connectableArduinos.values()){
 					mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
@@ -493,13 +517,16 @@ public class BTManagerThread extends Thread{
 		}
 
 		/**
-		 * This function decides what should be done when a device misbehaves
+		 * Decides what should be done when a device misbehaves
+		 * @param arduinoTh 
+		 * @param devMAC 
 		 * @param MAC: the address of the buggy Bluetooth-Arduino device 
 		 */
-		public void arduinoErrorRecovery(String MAC){
+		public void arduinoErrorRecovery(String devName, String devMAC, ArduinoThread arduinoTh){
+			// 1. Try to reconnect the socket
 
-			if(MAC!=null)
-				finalizeArduinoThread(MAC);
+			if(devMAC!=null)
+				finalizeArduinoThread(devMAC);
 		}
 	}
 
