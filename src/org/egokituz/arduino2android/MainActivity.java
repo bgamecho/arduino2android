@@ -507,8 +507,9 @@ public class MainActivity extends Activity {
 				devMAC =  msg.getData().getString("MAC");
 				timestamp = msg.getData().getLong("TIMESTAMP");
 
+				@SuppressWarnings("unused")
 				MessageReading msgReading = new MessageReading(readBuf);
-				String payload = msgReading.getPayload();
+				//String payload = msgReading.getPayload();
 
 				// write to log file
 				sendMsg = timestamp+" "+devName+" "+elapsedMilis+"ms "+bytes+" bytes";
@@ -544,7 +545,7 @@ public class MainActivity extends Activity {
 				// This message implies that a request to create an Arduino Thread
 
 				BluetoothDevice newDevice = (BluetoothDevice) msg.obj;
-				Log.v(TAG, "Dispatching thread creation for "+newDevice.getName());
+				//Log.v(TAG, "Dispatching thread creation for "+newDevice.getName());
 				BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
 				thDispatcher.execute(newDevice);
 
@@ -600,7 +601,7 @@ public class MainActivity extends Activity {
 			//TODO check that there is no other thread connected with this device??
 
 			try {
-				Log.v(TAG, "Trying to connect to "+devId);
+				//Log.v(TAG, "Trying to connect to "+devId);
 				_newArduinoThread = new ArduinoThread(arduinoHandler, _BTManager.btHandler, newDevice.getAddress());
 				_newArduinoThread.start();
 
@@ -610,7 +611,7 @@ public class MainActivity extends Activity {
 			} catch (Exception e) {
 				// Notify the Bluetooth Manager that the requested thread could not be created
 				_BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
-				Log.v(TAG, "Could not create thread for "+devId);
+				//Log.v(TAG, "Could not create thread for "+devId);
 				if(_newArduinoThread != null){
 					_newArduinoThread.finalizeThread();
 					e.printStackTrace();
@@ -641,6 +642,7 @@ public class MainActivity extends Activity {
 
 		byte stx;
 		byte msgId;
+		byte frameSeqNum;
 		byte dlc;
 		String payload;
 		byte etx;
@@ -654,6 +656,7 @@ public class MainActivity extends Activity {
 			try {
 				stx 				= buffer[bufferIndex++];
 				msgId 				= buffer[bufferIndex++];
+				frameSeqNum			= buffer[bufferIndex++];
 				dlc 				= buffer[bufferIndex++];
 				payload = new String(buffer, bufferIndex, --dlc);
 				bufferIndex+=dlc;
@@ -677,8 +680,9 @@ public class MainActivity extends Activity {
 				/* An exception should only happen if the buffer is too short and we walk off the end of the bytes.
 				 * Because of the way we read the bytes from the device this should never happen, but just in case
 				 * we'll catch the exception */
-				e.printStackTrace();
 				Log.d(TAG, "Failure building MessageReading from byte buffer, probably an incopmplete or corrupted buffer");
+				e.printStackTrace();
+				
 			}
 		}
 

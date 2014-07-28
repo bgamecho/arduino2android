@@ -103,7 +103,7 @@ public class CPUMonitorThread extends Thread{
 			sendMsg.setData(myDataBundle);
 			sendMsg.sendToTarget();
 			
-			Log.v(TAG, "CPU load changed: "+pct);
+			//Log.v(TAG, "CPU load changed: "+pct);
 			
 			try {
 				Thread.sleep(999);

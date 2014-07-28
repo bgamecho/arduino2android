@@ -96,7 +96,7 @@ public class LoggerThread extends Thread{
 
 		while(!exit_condition){
 			try {
-				Thread.sleep(99);
+				Thread.sleep(999);
 			} catch (InterruptedException e) {
 				Log.e(TAG, "Error waiting in the loop of the LoggerThread");
 				e.printStackTrace();
@@ -104,13 +104,17 @@ public class LoggerThread extends Thread{
 		}
 	}
 
+	// Externalize variables for performance
+	private File Root = Environment.getExternalStorageDirectory();
+	private File logFile;
+	private BufferedWriter buf;
+	private FileWriter fw;
+	
 	public void appendLog(String fileName, String text){
-		//Log.v(TAG, "Appending line in log file...");
-		Log.v(TAG, text);
-		File Root = Environment.getExternalStorageDirectory();
+		//Log.v(TAG, text);
 		if(Root.canWrite()){
 			//String filePath = mainCtx.getFilesDir().getPath().toString() + "/logXabi.txt";
-			File logFile = new File(Root,fileName);
+			logFile = new File(Root,fileName);
 			if (!logFile.exists()){
 				try{
 					logFile.createNewFile();
@@ -122,7 +126,8 @@ public class LoggerThread extends Thread{
 			}
 			try{
 				//BufferedWriter for performance, true to set append to file flag
-				BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true)); 
+				fw = new FileWriter(logFile, true);
+				buf = new BufferedWriter(fw); 
 				buf.append(text);
 				buf.newLine();
 				buf.close();

@@ -58,6 +58,11 @@ public class BTManagerThread extends Thread{
 	public static final int MESSAGE_BT_THREAD_CREATED = 2;
 	public static final int MESSAGE_SEND_COMMAND = 3;
 	public static final int MESSAGE_CONNECTION_LOST = 4;
+	public static final int MESSAGE_SET_SCENARIO = 5;
+
+	public static final int STABLE_SCENARIO = 0;
+	public static final int PROGRESSIVE_SCENARIO = 1;
+	public static final int OPPORTUNISTIC_SCENARIO = 2;
 
 	private Handler mainHandler;
 	private Context mainCtx;
@@ -170,7 +175,8 @@ public class BTManagerThread extends Thread{
 				devName = mBundle.getString("NAME");
 				devMAC =  mBundle.getString("MAC");
 				arduinoTh = (ArduinoThread) msg.obj;
-				_discoveryThread.arduinoErrorRecovery(devName, devMAC, arduinoTh);
+				devId = devName+"-"+devMAC;
+				_discoveryThread.arduinoErrorRecovery(devId, arduinoTh);
 
 				break;
 
@@ -182,10 +188,24 @@ public class BTManagerThread extends Thread{
 				mBundle = msg.getData();
 				String command = mBundle.getString("COMMAND");
 				devMAC =  mBundle.getString("MAC");
-				
+
 				sendCommandToArduino(devMAC, command);
 
 				break;
+
+			case MESSAGE_SET_SCENARIO:
+				int scn = (int) msg.obj;
+				switch (scn) {
+				case STABLE_SCENARIO:
+
+					break;
+				case PROGRESSIVE_SCENARIO:
+
+					break;
+				case OPPORTUNISTIC_SCENARIO:
+
+					break;
+				}
 			default:
 				Log.e(TAG, "Unknown message received: "+msg.what);
 				break;
@@ -334,10 +354,10 @@ public class BTManagerThread extends Thread{
 		exit_condition = true;
 	}
 
-	private void finalizeArduinoThread(String MAC) {
-		BTDeviceThread th = myArduinoThreads.remove(MAC);
+	private void finalizeArduinoThread(String devId) {
+		BTDeviceThread th = myArduinoThreads.remove(devId);
 		if(th != null){
-			if(th.getDeviceMAC().contentEquals(MAC)){
+			if(th.getDeviceMAC().contentEquals(devId)){
 				Log.v(TAG, "Finalizing thread for "+th.getDeviceName());
 				th.finalizeThread();
 			}
@@ -351,15 +371,12 @@ public class BTManagerThread extends Thread{
 		boolean result = false;
 		if(_BluetoothAdapter==null){
 			Log.v(TAG, "prepareBTAdapter(): mAdapter is null");
-			//this.sendInfo(R.string.BT_NOT_FOUND, "TDM BT not found");		
 		}else{
 			if(!_BluetoothAdapter.isEnabled()){
 				Log.v(TAG, "prepareBTAdapter(): mAdapter is not enabled");
-				//this.sendInfo(R.string.BT_NOT_ENABLED, "TDM BT not enabled");
 				result=true;
 			}else{
-				Log.v(TAG, "prepareBTAdapter(): mAdapter is enabled");
-				//this.sendInfo(R.string.BT_CONNECTING, "TDM BT connecting");
+				//Log.v(TAG, "prepareBTAdapter(): mAdapter is enabled");
 				result = true;
 			}
 		}
@@ -400,13 +417,13 @@ public class BTManagerThread extends Thread{
 			} catch (InterruptedException e) { e.printStackTrace(); }
 		}
 	}
-	
+
 	private void pingAll(){
 		for(BTDeviceThread th : myArduinoThreads.values()){
 			sendCommandToArduino(th.getDeviceMAC(), "p");
 		}
 	}
-	
+
 	private void sendCommandToArduino(String devMAC, String command){
 		for(BTDeviceThread th : myArduinoThreads.values()){
 			if(th.getDeviceMAC().equals(devMAC)){
@@ -439,7 +456,6 @@ public class BTManagerThread extends Thread{
 		BTManagerThread BTmgr;
 
 		/**
-		 * 
 		 * @param btMngr BTManagerThread 
 		 */
 		private ArduinoPlannerThread(BTManagerThread btMngr) {
@@ -448,9 +464,9 @@ public class BTManagerThread extends Thread{
 		}
 
 		public void run() {
-			// Loop to prevent the thread from finalizing and not answering to calls
-			long discoveryInterval = 30000; //miliseconds
 
+			long discoveryInterval = 30000; //miliseconds
+			// Loop to prevent the thread from finalizing and not answering to calls
 			while (!exit_condition){
 				_BluetoothAdapter.startDiscovery();	// newDevicesList is updated when ACTION_FOUND
 
@@ -458,7 +474,6 @@ public class BTManagerThread extends Thread{
 					Thread.sleep(discoveryInterval);
 				} catch (InterruptedException e) { e.printStackTrace(); }
 			}
-
 		}
 
 
@@ -523,11 +538,11 @@ public class BTManagerThread extends Thread{
 		 * @param devMAC 
 		 * @param MAC: the address of the buggy Bluetooth-Arduino device 
 		 */
-		public void arduinoErrorRecovery(String devName, String devMAC, ArduinoThread arduinoTh){
+		public void arduinoErrorRecovery(String devId, ArduinoThread arduinoTh){
 			// 1. Try to reconnect the socket
 
-			if(devMAC!=null)
-				finalizeArduinoThread(devMAC);
+			if(devId!=null)
+				finalizeArduinoThread(devId);
 		}
 	}
 

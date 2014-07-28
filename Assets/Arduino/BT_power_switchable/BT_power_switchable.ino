@@ -26,6 +26,8 @@ int MSGID_STRESS= 0x27;
 int DLC = 55;
 int ETX = 0x03;
 
+int frameNum = 0;
+
 void setup()
 {
     //Setup Timer2 to fire every 1ms
@@ -52,10 +54,8 @@ void loop()
   {
     incomingByte = miSerial.read();
     miSerial.write(incomingByte);
-    /*
-    char aux[1] = {incomingByte};
-    sendMessage(MSGID_PING, aux, 2);
-    */
+    Serial.print(incomingByte);
+
   }
   
   // Info from BT is displayed in Comm1
@@ -64,10 +64,18 @@ void loop()
     char command = Serial.read();
     switch(command){
       case 's':
+        // start sending data
         started = true;
+        break;
+      case 'm':
+        // Mute (stop sending data)
+        started = false;
+      case 'p':
+        // Power ON Bluetooth
         digitalWrite(btPower, HIGH);
       break;
       case 'f':
+        // Power OFF Bluetooth (and stop sending data)
         started = false;
         digitalWrite(btPower, LOW);
       break;
@@ -112,9 +120,14 @@ void sendMessage(int MSGID, char payload[], int length)
   unsigned char buf[sizeof(long int)];
   memcpy(buf,&crc,sizeof(long int));
 
+  if(frameNum<99)
+    frameNum+=1;
+  else
+    frameNum = 1;
   
   miSerial.write(STX);
   miSerial.write(MSGID);
+  miSerial.write(frameNum);
   miSerial.write(length);
   miSerial.write(payload);
   miSerial.write(buf,sizeof(buf));
