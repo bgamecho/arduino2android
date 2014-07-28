@@ -21,6 +21,11 @@
 package org.egokituz.arduino2android;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
+
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
@@ -124,8 +129,9 @@ public class ArduinoThread extends BTDeviceThread{
 	private int b = 0; // Read byte
 	private int bufferIndex = 0;
 	private int payloadBytesRemaining; // DLC parameter counter (received payload length)
+	private int MSG_TYPE;
 	private long prevRealtime = 0, elapsedRealTime, elapsedTime;
-	private Time timestamp;
+	private long timestamp;
 
 
 	/**
@@ -148,8 +154,7 @@ public class ArduinoThread extends BTDeviceThread{
 					Log.v(TAG, "Waiting for "+STX+". Read: "+b);
 				}
 
-				Time timestamp = new Time();
-				timestamp.setToNow();
+				timestamp = System.currentTimeMillis();
 				
 				elapsedRealTime =  SystemClock.elapsedRealtime();
 				elapsedTime = elapsedRealTime - prevRealtime;
@@ -161,8 +166,12 @@ public class ArduinoThread extends BTDeviceThread{
 				b = _inStream.read();
 				if (b != MSGID_PING && b != MSGID_DATA){
 					Log.v(TAG, "Unexpected MSGID. Received: "+ b);
+				} else {
+					MSG_TYPE = b;
 				}
 				buffer[bufferIndex++] = (byte) b; // append MSGID
+				
+				// The next byte must be the frame number ID
 
 				// The next byte must be the expected data length code
 				b = _inStream.read();
@@ -195,11 +204,16 @@ public class ArduinoThread extends BTDeviceThread{
 				System.arraycopy(buffer, 0, auxBuff, 0, bufferIndex);
 
 				// Notify the main activity that a message was read 
-				Message sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_READ, (int) elapsedTime, bufferIndex, auxBuff);
+				Message sendMsg = new Message();
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putString("NAME", this.getDeviceName());
 				myDataBundle.putString("MAC", this.getDeviceMAC());
-				myDataBundle.putString("TIMESTAMP", timestamp.format("%H:%M:%S"));
+				myDataBundle.putLong("TIMESTAMP", timestamp);
+				if(MSG_TYPE == MSGID_PING){
+					myDataBundle.putLong("PINGSENTTIME", pingSentTime);
+					sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_PING, (int) elapsedTime, bufferIndex, auxBuff);
+				}else
+					sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_READ, (int) elapsedTime, bufferIndex, auxBuff);
 				sendMsg.setData(myDataBundle);
 				sendMsg.sendToTarget();
 
@@ -226,7 +240,8 @@ public class ArduinoThread extends BTDeviceThread{
 			} catch (InterruptedException e) {
 				Log.e(TAG, "Error waiting in the loop of the ArduinoThread");
 				e.printStackTrace();
-			}*/
+			}
+			*/
 		}
 	}
 
@@ -237,13 +252,49 @@ public class ArduinoThread extends BTDeviceThread{
 	public Handler getHandler(){
 		return arduinoHandler;
 	}
+	
+	
+	long pingSentTime; 
 
 	/**
 	 * Sends a command to the connected Arduino via Bluetooth socket
 	 * @param cmd: Command to send to the Arduino
 	 */
 	protected void write(String cmd) {
+		
+		//Check if its a PING command
+		if(cmd.contentEquals("p")){
+			pingSentTime = System.currentTimeMillis();
+			int index = 0;
+			int size = 0;
+			byte[] outBuffer = new byte[1024];
+			outBuffer[index++] = STX;
+			outBuffer[index++] = MSGID_PING;
+			size = "p".getBytes().length+1;
+			outBuffer[index++] = (byte) size;
+			for(byte b : "p".getBytes())
+				outBuffer[index++] = b;
+			long CRC = getChecksum("p".getBytes());
+			for( byte b : longToBytes(CRC))
+				outBuffer[index++] = b;
+			outBuffer[index++] = ETX;
+			
+			try {
+				//buffer[0]= (byte) currentCommand.charAt(0);
+				
+				Log.v(TAG, "Sending ping: "+index+" bytes. CRC: "+(byte) CRC+" ("+longToBytes(CRC).length+" bytes)");
+				_outStream.write(outBuffer, 0, index);
+			} catch (IOException e) {
+				Log.e(TAG, "Exception writting to the Arduino socket");
+				e.printStackTrace();
+			} catch (Exception e) {
+				Log.e(TAG, "General exception in the run() method");
+				e.printStackTrace();
+			}
+			
+		}
 
+		/*
 		buffer = cmd.getBytes();
 		try {
 			//buffer[0]= (byte) currentCommand.charAt(0);
@@ -256,14 +307,49 @@ public class ArduinoThread extends BTDeviceThread{
 			Log.e(TAG, "General exception in the run() method");
 			e.printStackTrace();
 		}
-
+		*/
+		
+		
 		// Delay time between commands
+		/*
 		try {
 			Thread.sleep(10);
 		} catch (InterruptedException e) {
 			Log.e(TAG, "Error waiting in the loop of the robot");
 			e.printStackTrace();
 		}
+		*/
+	}
+	
+	/**
+	 * Calculates the CRC (Cyclic Redundancy Check) checksum value of the given bytes
+	 * according to the CRC32 algorithm.
+	 * @param bytes 
+	 * @return The CRC32 checksum
+	 */
+	private long getChecksum(byte bytes[]){
+
+		Checksum checksum = new CRC32();
+
+		// update the current checksum with the specified array of bytes
+		checksum.update(bytes, 0, bytes.length);
+
+		// get the current checksum value
+		long checksumValue = checksum.getValue();
+
+		return checksumValue;
+	}
+	
+	public byte[] longToBytes(long x) {
+	    ByteBuffer buffer = ByteBuffer.allocate(8);
+	    buffer.order(ByteOrder.LITTLE_ENDIAN);
+	    buffer.putLong(x);
+	    
+	    byte[] result = new byte[4];
+	    byte[] b = buffer.array();
+	    for(int i=0; i<4; i++)
+	    	result[i] = b[i];
+	    return result;
 	}
 
 

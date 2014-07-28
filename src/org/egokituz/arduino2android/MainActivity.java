@@ -39,6 +39,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.text.format.Time;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -65,22 +66,21 @@ public class MainActivity extends Activity {
 	public static final int MESSAGE_READ = 2;
 	public static final int MESSAGE_CONNECT_ARDUINO = 3;
 	protected static final int MESSAGE_BATTERY_STATE_CHANGED = 4;
-	
-	public static final String TOAST = "toast";
+	public static final int MESSAGE_CPU_USAGE = 5;
+	public static final int MESSAGE_PING = 6;
 
 	Button refreshButton, connectButton, disconnectButton,startButton,finButton;
 	Spinner spinnerBluetooth;
 	ListView devicesListView;
-	Button ledOn;
+	Button pingButton;
 	TextView tvLdr;
 
 	private String selected_arduinoMAC;
-	
-	private Float batteryLoad;
 
 	private BTManagerThread _BTManager;
 	private BatteryMonitorThread _BatteryMonitor;
 	private LoggerThread _Logger;
+	private CPUMonitorThread _cpuMonitor;
 
 	private ArduinoThread arduino;
 	boolean ardionoOn;
@@ -101,6 +101,7 @@ public class MainActivity extends Activity {
 
 		_BTManager = new BTManagerThread(this, arduinoHandler);
 		_BatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
+		_cpuMonitor = new CPUMonitorThread(this, arduinoHandler);
 		_Logger = new LoggerThread(this, arduinoHandler);
 
 	}
@@ -178,13 +179,13 @@ public class MainActivity extends Activity {
 			}
 		});
 
-		ledOn = (Button) findViewById(R.id.buttonLedOn);
-		ledOn.setOnClickListener(
+		pingButton = (Button) findViewById(R.id.buttonPing);
+		pingButton.setOnClickListener(
 				new OnClickListener() {
 
 					@Override
 					public void onClick(View v) {
-						switchLed();
+						pingCommand();
 					}
 				});
 
@@ -199,6 +200,10 @@ public class MainActivity extends Activity {
 			_BTManager.start();
 		if(!_BatteryMonitor.isAlive())
 			_BatteryMonitor.start();
+		if(!_cpuMonitor.isAlive())
+			_cpuMonitor.start();
+		if(!_Logger.isAlive())
+			_Logger.start();
 		super.onStart();
 	}
 
@@ -244,9 +249,10 @@ public class MainActivity extends Activity {
 
 		//Finalize threads
 		if(!finishApp){
-		_BTManager.finalize();
-		_BatteryMonitor.finalize();
-		_Logger.finalize();
+			_BTManager.finalize();
+			_BatteryMonitor.finalize();
+			_cpuMonitor.finalize();
+			_Logger.finalize();
 		}
 		finishApp = true;
 	}
@@ -259,9 +265,10 @@ public class MainActivity extends Activity {
 
 		//Finalize threads
 		if(!finishApp){
-		_BTManager.finalize();
-		_BatteryMonitor.finalize();
-		_Logger.finalize();
+			_BTManager.finalize();
+			_BatteryMonitor.finalize();
+			_cpuMonitor.finalize();
+			_Logger.finalize();
 		}
 		finishApp = true;
 	}
@@ -310,24 +317,24 @@ public class MainActivity extends Activity {
 		String[] myDeviceList = this.getBluetoothDevices();
 
 		if(myDeviceList!=null){
-			
 
-	
-		for(int i=0;i<myDeviceList.length; i++){
-			if(!myDeviceList[i].startsWith("BT-") || !myDeviceList[i].startsWith("ROB") )
-				myDeviceList[i].length();
-		}
 
-		if(myDeviceList != null){
-			ArrayAdapter<String> spinnerArrayAdapter = new ArrayAdapter<String>(this, 
-					android.R.layout.simple_spinner_item, myDeviceList);
-			spinnerArrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); // The drop down view
-			spinnerBluetooth.setAdapter(spinnerArrayAdapter);
-			spinnerBluetooth.setSelection(getIndex(spinnerBluetooth, "BT-"));
-			this.spinnerBluetooth.setClickable(true);
-		}else
-			this.spinnerBluetooth.setClickable(false);
-		
+
+			for(int i=0;i<myDeviceList.length; i++){
+				if(!myDeviceList[i].startsWith("BT-") || !myDeviceList[i].startsWith("ROB") )
+					myDeviceList[i].length();
+			}
+
+			if(myDeviceList != null){
+				ArrayAdapter<String> spinnerArrayAdapter = new ArrayAdapter<String>(this, 
+						android.R.layout.simple_spinner_item, myDeviceList);
+				spinnerArrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); // The drop down view
+				spinnerBluetooth.setAdapter(spinnerArrayAdapter);
+				spinnerBluetooth.setSelection(getIndex(spinnerBluetooth, "BT-"));
+				this.spinnerBluetooth.setClickable(true);
+			}else
+				this.spinnerBluetooth.setClickable(false);
+
 		}
 	}
 
@@ -385,14 +392,21 @@ public class MainActivity extends Activity {
 		}, 1000);
 	}
 
+	public void pingCommand(){
+		String MAC = selected_arduinoMAC;
+		sendCommandArduino(MAC, "p");
+	}
 	public void startCommand(){
-		sendCommandArduino("s");
+		String MAC = selected_arduinoMAC;
+		sendCommandArduino(MAC, "s");
 	}
 	public void finalizeCommand(){
-		sendCommandArduino("f");
+		String MAC = selected_arduinoMAC;
+		sendCommandArduino(MAC, "f");
 	}
 	public void switchLed(){
-		sendCommandArduino("l");
+		String MAC = selected_arduinoMAC;
+		sendCommandArduino(MAC, "l");
 		//sendCommandArduino("U");
 	}
 
@@ -402,7 +416,7 @@ public class MainActivity extends Activity {
 	 * 
 	 * @param str command for the Arduino
 	 */
-	public void sendCommandArduino(String str) {
+	public void sendCommandArduino(String MAC, String str) {
 
 		if(selected_arduinoMAC != null){
 			Message sendMsg = new Message();
@@ -411,19 +425,8 @@ public class MainActivity extends Activity {
 			myDataBundle.putString("MAC", selected_arduinoMAC);
 			sendMsg.setData(myDataBundle);
 			sendMsg.what = BTManagerThread.MESSAGE_SEND_COMMAND;
-			//			try {
-			//				Thread.sleep(50);
-			//			} catch (InterruptedException e) {
-			//				// TODO Auto-generated catch block
-			//				e.printStackTrace();
-			//			}
-			// Obtain the handler from the Thread and send the command in a Bundle
 			_BTManager.btHandler.sendMessage(sendMsg);
-			//arduino.getHandler().sendMessage(sendMsg);
-			//Log.v(TAG, "Command "+str+" sent");
-
 		}
-
 	}
 
 	// TODO delete this function
@@ -458,7 +461,7 @@ public class MainActivity extends Activity {
 		return result;
 
 	}
-	
+
 	/**
 	 * Inquires the Bluetooth-Manager for the currently connected Arduino devices. 
 	 * @return String[] array with the connected device IDs (name-MAC)
@@ -481,7 +484,13 @@ public class MainActivity extends Activity {
 	 * Handler connected with the BTManager Threads: 
 	 */
 	public Handler arduinoHandler = new Handler() {
-
+		long timestamp;
+		String sendMsg;
+		byte[] readBuf;
+		int elapsedMilis;
+		int bytes;
+		String devName, devMAC;
+		
 		@SuppressLint("NewApi")
 		@Override
 		public void handleMessage(Message msg) {
@@ -490,40 +499,80 @@ public class MainActivity extends Activity {
 			case MESSAGE_READ:
 				// Message received from a running Arduino Thread
 				// This message implies that a well formed message was read by an Arduino Thread
-				
-				byte[] readBuf = (byte[]) msg.obj;
-				int elapsedMilis = msg.arg1;
-				int bytes = msg.arg2;
-				String devName =  msg.getData().getString("NAME");
-				String devMAC =  msg.getData().getString("MAC");
-				String timestamp = msg.getData().getString("TIMESTAMP");
+
+				readBuf = (byte[]) msg.obj;
+				elapsedMilis = msg.arg1;
+				bytes = msg.arg2;
+				devName =  msg.getData().getString("NAME");
+				devMAC =  msg.getData().getString("MAC");
+				timestamp = msg.getData().getLong("TIMESTAMP");
 
 				MessageReading msgReading = new MessageReading(readBuf);
-				
-				// TODO write to log file
-				String logMsg = timestamp+" "+devName+" "+elapsedMilis+"ms "+bytes+" bytes";
-				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_TO_LOG_FILE, logMsg).sendToTarget();
-				
+				String payload = msgReading.getPayload();
+
+				// write to log file
+				sendMsg = timestamp+" "+devName+" "+elapsedMilis+"ms "+bytes+" bytes";
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_TO_LOG_FILE, sendMsg).sendToTarget();
+
 				//tvLdr.setText(readMessage);
 				break;
+			case MESSAGE_PING:
+				// Message received from a running Arduino Thread
+				// This message implies that a well formed PING message was read by an Arduino Thread
+
+				readBuf = (byte[]) msg.obj;
+				elapsedMilis = msg.arg1;
+				bytes = msg.arg2;
+				devName =  msg.getData().getString("NAME");
+				devMAC =  msg.getData().getString("MAC");
+				timestamp = msg.getData().getLong("TIMESTAMP");
+
+				// If it's a ping message, the field PINGSENTTIME is relevant
+				long pingSentTime = msg.getData().getLong("PINGSENTTIME");
+				long pingTime = timestamp-pingSentTime;
+				Log.v(TAG,"Ping time: "+pingTime);
+
+				// write to log file
+				sendMsg = timestamp+" "+devName+" "+pingTime;
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_PING, sendMsg).sendToTarget();
+
+				//tvLdr.setText(readMessage);
+				break;
+
 			case MESSAGE_CONNECT_ARDUINO:
 				// Message received from the Bluetooth-Manager Thread
 				// This message implies that a request to create an Arduino Thread
-				
+
 				BluetoothDevice newDevice = (BluetoothDevice) msg.obj;
 				Log.v(TAG, "Dispatching thread creation for "+newDevice.getName());
 				BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
 				thDispatcher.execute(newDevice);
-				
+
 				break;
 			case MESSAGE_BATTERY_STATE_CHANGED:
 				// Message received from the Battery-Monitor Thread
-				// This message implies that a the Battery percentage has changed
-				
-				batteryLoad = (Float) msg.obj;
-				
-				//TODO call the Logger to write the battery load
-				
+				// This message implies that the Battery percentage has changed
+
+				Float batteryLoad = (Float) msg.obj;
+				timestamp = msg.getData().getLong("TIMESTAMP");
+
+				// call the Logger to write the battery load
+				sendMsg = timestamp+" "+batteryLoad;
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, sendMsg).sendToTarget();
+
+				break;
+
+			case MESSAGE_CPU_USAGE:
+				// Message received from the CPU-Monitor Thread
+				// This message implies that the CPU usage has changed
+
+				Float cpu = (Float) msg.obj;
+				timestamp = msg.getData().getLong("TIMESTAMP");
+
+				// call the Logger to write the battery load
+				sendMsg = timestamp+" "+cpu;
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_CPU, sendMsg).sendToTarget();
+
 				break;
 			}
 		}
@@ -554,7 +603,7 @@ public class MainActivity extends Activity {
 				Log.v(TAG, "Trying to connect to "+devId);
 				_newArduinoThread = new ArduinoThread(arduinoHandler, _BTManager.btHandler, newDevice.getAddress());
 				_newArduinoThread.start();
-				
+
 				// Notify the Bluetooth Manager that the requested thread has been successfully created 
 				_BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
 				return "OK";
@@ -577,8 +626,8 @@ public class MainActivity extends Activity {
 			// Update the ListView containing the connected Arduinos
 			//populateDeviceListView();
 		}
-		
-		
+
+
 	}
 
 	/**
@@ -597,7 +646,7 @@ public class MainActivity extends Activity {
 		byte etx;
 		byte crc_bytes[] = new byte[8];
 		long crc;
-	    //private ByteBuffer auxBuffer = ByteBuffer.allocate(Long.SIZE);    
+		//private ByteBuffer auxBuffer = ByteBuffer.allocate(Long.SIZE);    
 
 		public MessageReading(byte[] buffer) {
 			int bufferIndex = 0;
@@ -614,11 +663,11 @@ public class MainActivity extends Activity {
 				crc_bytes [3]= buffer[bufferIndex++];
 				etx = buffer[bufferIndex];
 
-			    ByteBuffer auxBuffer = ByteBuffer.wrap(crc_bytes);
-			    auxBuffer = ByteBuffer.wrap(crc_bytes);
-			    auxBuffer.order(ByteOrder.LITTLE_ENDIAN);
-			    crc = auxBuffer.getLong();
-				
+				ByteBuffer auxBuffer = ByteBuffer.wrap(crc_bytes);
+				auxBuffer = ByteBuffer.wrap(crc_bytes);
+				auxBuffer.order(ByteOrder.LITTLE_ENDIAN);
+				crc = auxBuffer.getLong();
+
 				long checksum = getChecksum(payload.getBytes());
 
 				if(checksum != crc)

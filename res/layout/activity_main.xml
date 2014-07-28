@@ -59,13 +59,13 @@
     </LinearLayout>
 
     <Button
-        android:id="@+id/buttonLedOn"
+        android:id="@+id/buttonPing"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/textView1"
         android:layout_marginBottom="50dp"
         android:layout_marginTop="50dp"
-        android:text="Switch led" />
+        android:text="PING" />
 
     <LinearLayout
         android:id="@+id/m_LDRvaluesLayout"

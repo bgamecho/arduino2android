@@ -44,9 +44,12 @@ import android.util.Log;
  */
 public class LoggerThread extends Thread{
 
-	private static final String TAG = "BatteryMonitor";
+	private static final String TAG = "Logger";
 
 	protected static final int MESSAGE_WRITE_TO_LOG_FILE = 0;
+	protected static final int MESSAGE_WRITE_BATTERY = 1;
+	protected static final int MESSAGE_CPU = 2;
+	protected static final int MESSAGE_PING = 3;
 
 	private Context mainCtx;
 	private Handler mainHandler;
@@ -58,18 +61,26 @@ public class LoggerThread extends Thread{
 
 		@Override
 		public void handleMessage(Message msg) {
-
+			String line;
 			switch (msg.what) {
 			case MESSAGE_WRITE_TO_LOG_FILE:
-				String line = (String) msg.obj;
-				appendLog(line);
+				line = (String) msg.obj;
+				appendLog("arduinoMsg.txt",line);
 				break;
-
-			default:
+			case MESSAGE_WRITE_BATTERY:
+				line = (String) msg.obj;
+				appendLog("battery.txt",line);
+				break;
+			case MESSAGE_CPU:
+				line = (String) msg.obj;
+				appendLog("cpu.txt",line);
+				break;
+			case MESSAGE_PING:
+				line = (String) msg.obj;
+				appendLog("ping.txt",line);
 				break;
 			}
 		}
-
 	};
 
 
@@ -93,12 +104,13 @@ public class LoggerThread extends Thread{
 		}
 	}
 
-	public void appendLog(String text){
-		Log.v(TAG, "Appending line in log file...");
+	public void appendLog(String fileName, String text){
+		//Log.v(TAG, "Appending line in log file...");
+		Log.v(TAG, text);
 		File Root = Environment.getExternalStorageDirectory();
 		if(Root.canWrite()){
 			//String filePath = mainCtx.getFilesDir().getPath().toString() + "/logXabi.txt";
-			File logFile = new File(Root,"logXabi.txt");
+			File logFile = new File(Root,fileName);
 			if (!logFile.exists()){
 				try{
 					logFile.createNewFile();
@@ -132,25 +144,25 @@ public class LoggerThread extends Thread{
 
 	private void sendLogByEmail() {
 		try 
-		   {        
-		       String fileName = URLEncoder.encode("logXabi.txt", "UTF-8");
-		       String PATH =  Environment.getExternalStorageDirectory()+"/"+fileName.trim().toString();
+		{        
+			String fileName = URLEncoder.encode("logXabi.txt", "UTF-8");
+			String PATH =  Environment.getExternalStorageDirectory()+"/"+fileName.trim().toString();
 
-		       Uri uri = Uri.parse("file://"+PATH);
-		       Intent i = new Intent(Intent.ACTION_SEND);
-		       i.setType("text/plain");
-		       i.putExtra(Intent.EXTRA_EMAIL, new String[] {"xgardeazabal@gamail.com"});
-		       i.putExtra(Intent.EXTRA_SUBJECT,"android - email with attachment");
-		       i.putExtra(Intent.EXTRA_TEXT,"");
-		       i.putExtra(Intent.EXTRA_STREAM, uri);
-		       mainCtx.startActivity(Intent.createChooser(i, "Select application"));
-		   } 
-		   catch (UnsupportedEncodingException e) 
-		   {
-		        // TODO Auto-generated catch block
-		        e.printStackTrace();
-		   }
-		
+			Uri uri = Uri.parse("file://"+PATH);
+			Intent i = new Intent(Intent.ACTION_SEND);
+			i.setType("text/plain");
+			i.putExtra(Intent.EXTRA_EMAIL, new String[] {"xgardeazabal@gamail.com"});
+			i.putExtra(Intent.EXTRA_SUBJECT,"android - email with attachment");
+			i.putExtra(Intent.EXTRA_TEXT,"");
+			i.putExtra(Intent.EXTRA_STREAM, uri);
+			mainCtx.startActivity(Intent.createChooser(i, "Select application"));
+		} 
+		catch (UnsupportedEncodingException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 

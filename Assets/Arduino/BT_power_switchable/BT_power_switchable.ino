@@ -48,15 +48,19 @@ void loop()
 {
 
   // Echo all incoming Bluetooth data (for PING tests)
-  if(miSerial.available()){
+  while(miSerial.available())
+  {
     incomingByte = miSerial.read();
-    
+    miSerial.write(incomingByte);
+    /*
     char aux[1] = {incomingByte};
     sendMessage(MSGID_PING, aux, 2);
+    */
   }
   
   // Info from BT is displayed in Comm1
-  if (Serial.available()){
+  if (Serial.available())
+  {
     char command = Serial.read();
     switch(command){
       case 's':
@@ -76,9 +80,11 @@ void loop()
 
   }
   
-  if(check_clock()){ 
+  if(check_clock())
+  { 
     
-    if(started){
+    if(started)
+    {
       ldr = analogRead(0);
       
       String payload = "T:";
@@ -88,9 +94,7 @@ void loop()
       payload+="#";
       payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut aliquet, ";
       //payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit.Lorem ipsum dolor sit amet, consectetur adipiscing elit.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed elit dolor, venenatis ac magna at, dapibus ultricies tellus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Fusce pharetra turpis non leo pulvinar, at elementum urna hendrerit. ";
-
-      //payload = "HELLO";
-      
+     
       int length = payload.length()+1; // Length (with one extra character for the null terminator)
       char aux[length];
       payload.toCharArray(aux, length);
@@ -101,7 +105,8 @@ void loop()
   delay(50);
 }
 
-void sendMessage(int MSGID, char payload[], int length){
+void sendMessage(int MSGID, char payload[], int length)
+{
   
   long crc = crc_string(payload);
   unsigned char buf[sizeof(long int)];
@@ -122,7 +127,8 @@ void sendMessage(int MSGID, char payload[], int length){
 }
 
 // This method updates a counter of seconds and shows information through the Serial interface
-boolean check_clock(){
+boolean check_clock()
+{
   if(flag_seconds){
     flag_seconds = false;
     return true;
@@ -133,7 +139,7 @@ boolean check_clock(){
 //Timer2 Overflow Interrupt Vector, called every 1ms
 ISR(TIMER2_OVF_vect) {
   ticks++;               //Increments the interrupt counter
-  if(ticks > 99){
+  if(ticks > 999){
     ticks = 0;           //Resets the interrupt counter
     flag_seconds = true;
     seconds++;

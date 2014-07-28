@@ -24,7 +24,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
+import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 /**
@@ -49,7 +51,13 @@ public class BatteryMonitorThread extends Thread{
 			case Intent.ACTION_BATTERY_CHANGED:
 				Float pct = getBatteryPercentage();
 				
-				mainHandler.obtainMessage(MainActivity.MESSAGE_BATTERY_STATE_CHANGED,pct).sendToTarget();
+				long timestamp = System.currentTimeMillis();
+				
+				Message sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_BATTERY_STATE_CHANGED,pct);
+				Bundle myDataBundle = new Bundle();
+				myDataBundle.putLong("TIMESTAMP", timestamp);
+				sendMsg.setData(myDataBundle);
+				sendMsg.sendToTarget();
 				
 				Log.v(TAG, "Battery Changed: "+pct);
 				break;

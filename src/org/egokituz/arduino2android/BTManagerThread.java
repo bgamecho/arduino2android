@@ -142,7 +142,7 @@ public class BTManagerThread extends Thread{
 			case MESSAGE_BT_THREAD_CREATED:
 				// Message received from Main Activity
 				// This message implies that the Main Activity has created the requested thread
-				
+
 				arduinoTh = (ArduinoThread) msg.obj;
 				btDevice = arduinoTh.getBluetoothDevice();
 				devName = btDevice.getName();
@@ -155,7 +155,7 @@ public class BTManagerThread extends Thread{
 			case MESSAGE_ERROR_CREATING_BT_THREAD:
 				// Message received from Main Activity
 				// This message implies that the Main Activity could not create the requested thread
-				
+
 				//TODO what should be done with an Arduino that cannot be connected?
 				// try to recover from the error
 				btDevice = (BluetoothDevice) msg.obj;
@@ -165,7 +165,7 @@ public class BTManagerThread extends Thread{
 			case MESSAGE_CONNECTION_LOST:
 				// Message received from a running Arduino Thread
 				// This message implies that an error occurred while reading or writing to the socket
-				
+
 				mBundle = msg.getData();
 				devName = mBundle.getString("NAME");
 				devMAC =  mBundle.getString("MAC");
@@ -178,21 +178,13 @@ public class BTManagerThread extends Thread{
 			case MESSAGE_SEND_COMMAND:
 				// Message received from the Main Activiy
 				// This message implies a request to write to the socket of a running Arduino
-				
+
 				mBundle = msg.getData();
 				String command = mBundle.getString("COMMAND");
 				devMAC =  mBundle.getString("MAC");
+				
+				sendCommandToArduino(devMAC, command);
 
-				for(BTDeviceThread th : myArduinoThreads.values()){
-					if(th.getDeviceMAC().equals(devMAC)){
-						Message sendMsg = new Message();
-						Bundle myDataBundle = new Bundle();
-						myDataBundle.putString("COMMAND", command);
-						sendMsg.setData(myDataBundle);
-						// Obtain the handler from the Thread and send the command in a Bundle
-						((ArduinoThread) th).getHandler().sendMessage(sendMsg);
-					}
-				}
 				break;
 			default:
 				Log.e(TAG, "Unknown message received: "+msg.what);
@@ -291,7 +283,7 @@ public class BTManagerThread extends Thread{
 			}
 		}
 	};
-	
+
 	public String[] getConnectedArduinos(){
 		String[] result = null;
 		ArrayList<String> devices = new ArrayList<String>(); 
@@ -343,14 +335,16 @@ public class BTManagerThread extends Thread{
 	}
 
 	private void finalizeArduinoThread(String MAC) {
-		for(BTDeviceThread th : myArduinoThreads.values()){
-			String devId = th.getDeviceName()+"-"+th.getDeviceMAC();
-			if(devId.contains(MAC)){
-				Log.v(TAG, "Finalizing thread for "+devId);
+		BTDeviceThread th = myArduinoThreads.remove(MAC);
+		if(th != null){
+			if(th.getDeviceMAC().contentEquals(MAC)){
+				Log.v(TAG, "Finalizing thread for "+th.getDeviceName());
 				th.finalizeThread();
 			}
+
 		}
 	}
+
 
 	private boolean isBTReady(){
 		Log.v(TAG, "isBTReady()");
@@ -398,8 +392,31 @@ public class BTManagerThread extends Thread{
 		Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
 		newDevicesList.addAll(bondedDevices);
 
+		long pingInterval = 1000;
 		while(!exit_condition){
-
+			try {
+				pingAll();
+				Thread.sleep(pingInterval);
+			} catch (InterruptedException e) { e.printStackTrace(); }
+		}
+	}
+	
+	private void pingAll(){
+		for(BTDeviceThread th : myArduinoThreads.values()){
+			sendCommandToArduino(th.getDeviceMAC(), "p");
+		}
+	}
+	
+	private void sendCommandToArduino(String devMAC, String command){
+		for(BTDeviceThread th : myArduinoThreads.values()){
+			if(th.getDeviceMAC().equals(devMAC)){
+				Message sendMsg = new Message();
+				Bundle myDataBundle = new Bundle();
+				myDataBundle.putString("COMMAND", command);
+				sendMsg.setData(myDataBundle);
+				// Obtain the handler from the Thread and send the command in a Bundle
+				((ArduinoThread) th).getHandler().sendMessage(sendMsg);
+			}
 		}
 	}
 
@@ -431,20 +448,14 @@ public class BTManagerThread extends Thread{
 		}
 
 		public void run() {
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-
 			// Loop to prevent the thread from finalizing and not answering to calls
-			long tiempoEspera = 30000; //miliseconds
+			long discoveryInterval = 30000; //miliseconds
 
 			while (!exit_condition){
 				_BluetoothAdapter.startDiscovery();	// newDevicesList is updated when ACTION_FOUND
 
 				try {
-					Thread.sleep(tiempoEspera);
+					Thread.sleep(discoveryInterval);
 				} catch (InterruptedException e) { e.printStackTrace(); }
 			}
 
