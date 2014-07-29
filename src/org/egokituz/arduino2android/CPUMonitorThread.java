@@ -22,11 +22,7 @@ package org.egokituz.arduino2android;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -46,7 +42,7 @@ public class CPUMonitorThread extends Thread{
 	
 	public CPUMonitorThread(Context context, Handler handler){
 		this.setName(TAG);
-		Log.v(TAG, "CPUMonitorThread Constructor start");
+		//Log.v(TAG, "CPUMonitorThread Constructor start");
 		
 		mainHandler = handler;
 		mainCtx = context;

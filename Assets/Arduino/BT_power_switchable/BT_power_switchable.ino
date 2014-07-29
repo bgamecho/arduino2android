@@ -54,6 +54,7 @@ void loop()
   {
     incomingByte = miSerial.read();
     miSerial.write(incomingByte);
+    
     Serial.print(incomingByte);
     Serial.print(' ');
     if(incomingByte==ETX)

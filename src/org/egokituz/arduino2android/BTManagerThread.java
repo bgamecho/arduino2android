@@ -20,12 +20,7 @@
 
 package org.egokituz.arduino2android;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -39,12 +34,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.util.TimingLogger;
 
 /**
  * @author Xabier Gardeazabal
@@ -98,7 +92,7 @@ public class BTManagerThread extends Thread{
 
 	// List of currently connected Arduinos (with an independent thread for each) 
 	//private List<BTDeviceThread> myArduinos;
-	private Map<String,BTDeviceThread> myArduinoThreads;
+	private Map<String,ArduinoThread> myArduinoThreads;
 
 	// New discovered bluetooth devices list
 	private List<BluetoothDevice> newDevicesList;
@@ -115,8 +109,9 @@ public class BTManagerThread extends Thread{
 	 * For each device discovered, it launches an "ArduinoThread" thread
 	 * @param context
 	 * @param handler
+	 * @throws Exception 
 	 */
-	public BTManagerThread(Context context, Handler handler) {
+	public BTManagerThread(Context context, Handler handler) throws Exception {
 		this.setName(TAG);
 		//Log.v(TAG, "BTManagerThread Constructor start");
 
@@ -127,6 +122,7 @@ public class BTManagerThread extends Thread{
 		_BluetoothAdapter = BluetoothAdapter.getDefaultAdapter();    
 		if (_BluetoothAdapter == null) {
 			// TODO Device does not support Bluetooth
+			throw new Exception("This device does not support Bluetooth");
 		}
 		if (!_BluetoothAdapter.isEnabled()){
 			Log.e(TAG, "Bluetooth disabled");
@@ -154,8 +150,6 @@ public class BTManagerThread extends Thread{
 		mainCtx.registerReceiver(myReceiver, filter4);
 		mainCtx.registerReceiver(myReceiver, filter5);
 	}
-
-
 
 	/**
 	 * Handler for receiving commands from the Activities
@@ -194,7 +188,7 @@ public class BTManagerThread extends Thread{
 				// try to recover from the error
 				btDevice = (BluetoothDevice) msg.obj;
 				devMAC = btDevice.getAddress();
-				
+
 				if(connectableArduinos.size()>0)
 					_discoveryThread.connectAvalaiableArduinos();
 
@@ -232,7 +226,7 @@ public class BTManagerThread extends Thread{
 
 				int plan = msg.arg1;
 				discoveryPlan = plan;
-				
+
 				int connMode = msg.arg2;
 				connectionMode = connMode;
 			}
@@ -319,7 +313,7 @@ public class BTManagerThread extends Thread{
 					if(newArduinoAvalable)
 						_discoveryThread.connectAvalaiableArduinos();
 				}
-				
+
 				switch (discoveryPlan) {
 				case INITIAL_DISCOVERY:
 					// Do nothing, since the initial discovery has already been done
@@ -327,14 +321,18 @@ public class BTManagerThread extends Thread{
 					break;
 				case CONTINUOUS_DISCOVERY:
 					// Start a new discovery immediately
-					_BluetoothAdapter.startDiscovery();
+					_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
 
 					break;
 				case PERIODIC_DISCOVERY:
 					long discoveryInterval = 30000; //miliseconds
-
-					_BluetoothAdapter.startDiscovery();	// newDevicesList is updated when ACTION_FOUND
-
+					
+					mainHandler.postDelayed( new Runnable() {
+					      @Override
+					      public void run() {
+					    	  _BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
+					      }
+					}, discoveryInterval);
 					break;
 				}
 
@@ -375,7 +373,7 @@ public class BTManagerThread extends Thread{
 		ArrayList<String> devices = new ArrayList<String>(); 
 
 		for(String devId : myArduinoThreads.keySet()){
-			BTDeviceThread dev = myArduinoThreads.get(devId);
+			ArduinoThread dev = myArduinoThreads.get(devId);
 			if(dev.isAlive() && dev.isConnected())
 				devices.add(devId);
 		}
@@ -404,7 +402,7 @@ public class BTManagerThread extends Thread{
 		//TODO poner a null receivers
 
 		//Finalize Arduino threads
-		for(BTDeviceThread th : myArduinoThreads.values()){
+		for(ArduinoThread th : myArduinoThreads.values()){
 			th.finalizeThread();
 		}
 
@@ -421,7 +419,7 @@ public class BTManagerThread extends Thread{
 	}
 
 	private void finalizeArduinoThread(String devId) {
-		BTDeviceThread th = myArduinoThreads.remove(devId);
+		ArduinoThread th = myArduinoThreads.remove(devId);
 		if(th != null){
 			if(th.getDeviceMAC().contentEquals(devId)){
 				Log.v(TAG, "Finalizing thread for "+th.getDeviceName());
@@ -432,28 +430,11 @@ public class BTManagerThread extends Thread{
 	}
 
 
-	private boolean isBTReady(){
-		Log.v(TAG, "isBTReady()");
-		boolean result = false;
-		if(_BluetoothAdapter==null){
-			Log.v(TAG, "prepareBTAdapter(): mAdapter is null");
-		}else{
-			if(!_BluetoothAdapter.isEnabled()){
-				Log.v(TAG, "prepareBTAdapter(): mAdapter is not enabled");
-				result=true;
-			}else{
-				//Log.v(TAG, "prepareBTAdapter(): mAdapter is enabled");
-				result = true;
-			}
-		}
-		return result;
-	}
-
 	@Override
 	public synchronized void start() {
 		// TODO Auto-generated method stub
 		super.start();
-		myArduinoThreads = new HashMap<String,BTDeviceThread>();
+		myArduinoThreads = new HashMap<String,ArduinoThread>();
 		newDevicesList = new ArrayList<BluetoothDevice>();
 		connectableArduinos = new HashMap<String,BluetoothDevice>();
 		ignoredDevicesList = new HashMap<String,BluetoothDevice>();
@@ -467,9 +448,7 @@ public class BTManagerThread extends Thread{
 		Log.v(TAG, "startDiscovery()");
 
 		_discoveryThread = new ArduinoPlannerThread((BTManagerThread) this);
-		if(this.isBTReady()){
-			_discoveryThread.start();
-		}
+		_discoveryThread.start();
 
 		// Get bonded devices (only the first time) 		
 		Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
@@ -487,21 +466,22 @@ public class BTManagerThread extends Thread{
 	}
 
 	private void pingAll(){
-		for(BTDeviceThread th : myArduinoThreads.values()){
+		for(ArduinoThread th : myArduinoThreads.values()){
 			sendCommandToArduino(th.getDeviceMAC(), "p");
 		}
 	}
 
 	private void sendCommandToArduino(String devMAC, String command){
-		for(BTDeviceThread th : myArduinoThreads.values()){
-			if(th.getDeviceMAC().equals(devMAC)){
-				Message sendMsg = new Message();
-				Bundle myDataBundle = new Bundle();
-				myDataBundle.putString("COMMAND", command);
-				sendMsg.setData(myDataBundle);
-				// Obtain the handler from the Thread and send the command in a Bundle
-				((ArduinoThread) th).getHandler().sendMessage(sendMsg);
-			}
+		for(ArduinoThread th : myArduinoThreads.values()){
+			if(th.isConnected())
+				if(th.getDeviceMAC().equals(devMAC)){
+					Message sendMsg = new Message();
+					Bundle myDataBundle = new Bundle();
+					myDataBundle.putString("COMMAND", command);
+					sendMsg.setData(myDataBundle);
+					// Obtain the handler from the Thread and send the command in a Bundle
+					((ArduinoThread) th).arduinoHandler.sendMessage(sendMsg);
+				}
 		}
 	}
 
@@ -534,15 +514,13 @@ public class BTManagerThread extends Thread{
 		public void run() {
 
 			// Initial discovery (there's always at least one initial discovery)
-			_BluetoothAdapter.startDiscovery();
+			_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
 
 			// Loop to prevent the thread from finalizing and not answering to calls
 			while (!exit_condition){
-
 				try {
 					Thread.sleep(999);
 				} catch (InterruptedException e) { e.printStackTrace(); }
-
 			}
 		}
 
@@ -603,7 +581,11 @@ public class BTManagerThread extends Thread{
 				// Request the connection with JUST ONE arduino device
 				if(connectableArduinos.size()>0){
 					BluetoothDevice arduino = connectableArduinos.values().iterator().next();
-					mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
+
+					//mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
+
+					BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
+					thDispatcher.execute(arduino);
 
 					String devId = arduino.getName()+"-"+arduino.getAddress();
 					connectableArduinos.remove(devId);
@@ -614,7 +596,9 @@ public class BTManagerThread extends Thread{
 				// Request the connection with EACH and EVERY connectable Arduino device
 				if(connectableArduinos.size()>0){
 					for(BluetoothDevice arduino: connectableArduinos.values()){
-						mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
+						//mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
+						BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
+						thDispatcher.execute(arduino);
 					}
 					connectableArduinos.clear();
 				}else{
@@ -636,6 +620,56 @@ public class BTManagerThread extends Thread{
 			if(devId!=null)
 				finalizeArduinoThread(devId);
 		}
+	}
+
+	// ------------------------------------------//
+	// NESTED CLASS: BackgroundThreadDispatcher  //
+	// ------------------------------------------//
+	/**
+	 * @author Xabier Gardeazabal
+	 * 
+	 * This performs an ArduinoThread thread creation without blocking the UI 
+	 */
+	private class BackgroundThreadDispatcher extends AsyncTask<BluetoothDevice, Void, String> {
+
+		protected String doInBackground(BluetoothDevice... params) {
+			Thread.currentThread().setName("ThreadDispatcher");
+			ArduinoThread _newArduinoThread = null;
+
+			BluetoothDevice newDevice = params[0];
+
+			String devId = newDevice.getName()+"-"+newDevice.getAddress();
+
+			//TODO check that there is no other thread connected with this device??
+
+			try {
+				//Log.v(TAG, "Trying to connect to "+devId);
+				_newArduinoThread = new ArduinoThread(mainHandler, btHandler, newDevice);
+				_newArduinoThread.start();
+
+				// Notify the Bluetooth Manager that the requested thread has been successfully created 
+				btHandler.obtainMessage(BTManagerThread.MESSAGE_BT_THREAD_CREATED, _newArduinoThread).sendToTarget();
+				return "OK";
+			} catch (Exception e) {
+				// Notify the Bluetooth Manager that the requested thread could not be created
+				btHandler.obtainMessage(BTManagerThread.MESSAGE_ERROR_CREATING_BT_THREAD, newDevice).sendToTarget();
+				//Log.v(TAG, "Could not create thread for "+devId);
+				if(_newArduinoThread != null){
+					_newArduinoThread.finalizeThread();
+					//e.printStackTrace();
+				}
+				return "ERROR";
+			}
+		}
+
+		@Override
+		protected void onPostExecute(String result) {
+			super.onPostExecute(result);
+			// Update the ListView containing the connected Arduinos
+			//populateDeviceListView(); //ERROR: only the main thread/activity can manipulate the layout
+		}
+
+
 	}
 
 }

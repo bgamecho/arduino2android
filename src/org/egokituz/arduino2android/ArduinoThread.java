@@ -21,20 +21,26 @@
 package org.egokituz.arduino2android;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
-import android.bluetooth.BluetoothAdapter;
+import org.egokituz.utils.ArduinoMessage;
+import org.egokituz.utils.BadMessageFrameFormat;
+
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
-import android.text.format.Time;
 import android.util.Log;
 
 /**
@@ -45,12 +51,22 @@ import android.util.Log;
  * It writes and reads data to/from the socket 
  *
  */
-public class ArduinoThread extends BTDeviceThread{
+public class ArduinoThread extends Thread{
 
 	public final static String TAG ="ArduinoThread";
 
+	private boolean terminateFlag;
+	private boolean connected;
 
-	public String recvLine;
+	protected Handler mainHandler;
+	protected Handler btMngrHandler;
+
+	private BluetoothDevice myBluetoothDevice = null;
+	private String devName, devMac;
+
+	private BluetoothSocket _socket = null;
+	private InputStream _inStream = null;
+	private OutputStream _outStream = null;
 
 	/**
 	 * New ArduinoThread that handles the connection with an Arduino with the provided MAC address
@@ -60,33 +76,63 @@ public class ArduinoThread extends BTDeviceThread{
 	 * @param macAddress
 	 * @throws Exception
 	 */
-	public ArduinoThread(Handler myHandler, Handler btMngrHandler, String macAddress) throws Exception {
-		super(myHandler, btMngrHandler); // BTDeviceThread Constructor 
+	public ArduinoThread(Handler myHandler, Handler btMngrHandler, BluetoothDevice device) throws Exception {
 		this.setName("ArduinoThread"); // Set this thread's name
-		super.setupBT(macAddress); // try to get the default Bluetooth adapter and remote device
 
-		try {
-			super.openConnection();
-		} catch (IOException e) {
-			if(!this.connected){
-				boolean bonded = false;
-				BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
-				for(BluetoothDevice btDev : btAdapter.getBondedDevices()){
-					if(btDev.getAddress().equalsIgnoreCase(macAddress))
-						bonded = true;
-				}
-				if(bonded)
-					throw new Exception("could not connect (the device may be out of range or off)");
-				else
-					throw new Exception("could not connect because device is not paired");
-			}
-		}
+		terminateFlag = false;
+		connected=false;
+		this.mainHandler = myHandler;
+		this.btMngrHandler = btMngrHandler;
+
+		myBluetoothDevice = device;
+		devMac = myBluetoothDevice.getAddress();
+		devName = myBluetoothDevice.getName();
+
+
+		openConnection();
+		
+	}
+
+	public BluetoothDevice getBluetoothDevice() {
+		return myBluetoothDevice;
+	}
+	public String getDeviceName() {
+		return devName;
+	}
+	public String getDeviceMAC(){
+		return devMac;
+	}
+	public String getDeviceId(){
+		return devName+"-"+devMac;
+	}
+	public boolean isConnected() {
+		return connected;
+	}
+
+	/** WARNING: This method will block until a connection is made or the connection fails. 
+	 * 	If this method returns without an exception then this socket is now connected.
+	 * 
+	 * Creating new connections to remote Bluetooth devices should not be attempted 
+	 * while device discovery is in progress. Device discovery is a heavyweight procedure 
+	 * on the Bluetooth adapter and will significantly slow a device connection.
+	 * 
+	 * if device is not bonded, an intent will automatically be called and user should enter PIN code
+	 */
+	public void openConnection() throws Exception{
+			Method m = myBluetoothDevice.getClass().getMethod("createRfcommSocket", new Class[] { int.class });
+			_socket = (BluetoothSocket) m.invoke(myBluetoothDevice, 1);
+			_socket.connect();
+			_inStream = _socket.getInputStream();
+			_outStream = _socket.getOutputStream();
+
+			if(_socket.isConnected())
+				connected = true;
 	}
 
 	/**
 	 * Handler for receiving commands from the Activities
 	 */
-	private Handler arduinoHandler = new Handler(Looper.getMainLooper()) {
+	public Handler arduinoHandler = new Handler(Looper.getMainLooper()) {
 		@Override
 		public void handleMessage(Message msg) {
 			Bundle myBundle = msg.getData();
@@ -101,17 +147,8 @@ public class ArduinoThread extends BTDeviceThread{
 	};
 
 	@Override
-	public void initialize() {
-		recvLine = "";
-	}
-
-	/* (non-Javadoc)
-	 * @see java.lang.Thread#start()
-	 */
-	@Override
 	public synchronized void start() {
 		super.start();
-
 		try {
 			int unread = _inStream.available();
 			_inStream.skip(unread);
@@ -121,10 +158,60 @@ public class ArduinoThread extends BTDeviceThread{
 		}
 	}
 
-	private final int STX = 0x02; // Start of Text flag 
-	private final int MSGID_PING = 0x26; // Message ID: ping type
-	private final int MSGID_DATA = 0x27; // Message ID: Data type
-	private final int ETX = 0x03; // End of Text flag
+	/**
+	 * Close this thread by liberating resources: closes input & output streams and the socket.
+	 * Warning: this function will block until the socket is disconnected.
+	 */
+	public void close(){
+		if (_inStream != null) {
+			try {
+				_inStream.close();
+			} catch (Exception e) {
+				Log.e(TAG, "Error closing the input stream");
+				e.printStackTrace();
+			}
+			_inStream = null;
+		}
+		if (_outStream != null) {
+			try {
+				_outStream.close();
+			} catch (Exception e) {
+				Log.e(TAG, "Error closing the output stream");
+				e.printStackTrace();
+			}
+			_outStream = null;
+		}
+		if (_socket != null) {
+			try {_socket.close();
+			} catch (Exception e) {
+				Log.e(TAG, "Error closing the BT socket");
+				e.printStackTrace();
+			}
+			while(_socket.isConnected()){
+				// Wait until socket is disconnected completely
+			}
+			_socket = null;
+			connected = false;
+		}
+	}
+
+	/**
+	 * Stops the thread in a safe way
+	 */
+	public void finalizeThread(){
+		terminateFlag = true;
+		Log.d(TAG, this.getName()+" is passing from alive to death state ");
+		close();
+	}
+
+	@Override
+	public void run() {
+		while(!terminateFlag) {
+			loop();
+		}
+	}
+
+
 
 	private byte[] buffer = new byte[1024]; // Read buffer
 	private int b = 0; // Read byte
@@ -134,8 +221,8 @@ public class ArduinoThread extends BTDeviceThread{
 	private long prevRealtime = 0, elapsedRealTime, elapsedTime;
 	private long timestamp;
 
-	private int pingSeqNum=1, dataSeqNum=0;
-	
+	//private int pingSeqNum=1, dataSeqNum=0;
+
 	private long errorCount = 0L, msgCount = 0L;
 	private double errorRate;
 
@@ -145,7 +232,6 @@ public class ArduinoThread extends BTDeviceThread{
 	 * When a well formed message is read, sends a MESSAGE_READ message 
 	 * through the Main Activity's handler.
 	 */
-	@Override
 	protected void loop() {
 		// Keep listening to the InputStream while connected
 		if(connected){
@@ -155,29 +241,26 @@ public class ArduinoThread extends BTDeviceThread{
 				bufferIndex = 0;
 
 				// Read bytes from the stream until we encounter the the start of message character
-				while (( b = _inStream.read()) != STX ) {
-					// Keep looking for STX
-					Log.v(TAG, "Waiting for "+STX+". Read: "+b);
+				while (( b = _inStream.read()) != ArduinoMessage.STX ) {
+					// Keep looking for STX (implies that a frame may have been lost)
+					Log.v(TAG, "Waiting for STX. Read: "+b);
 				}
 				
-				msgCount++;
-
+				// Perform time calculations as soon as the STX is read
 				timestamp = System.currentTimeMillis();
-
 				elapsedRealTime =  SystemClock.elapsedRealtime();
 				elapsedTime = elapsedRealTime - prevRealtime;
 				prevRealtime = elapsedRealTime;
 
+				msgCount++;
+				
 				buffer[bufferIndex++] = (byte) b; // append STX at the beginning of the buffer  
 
 				// The next byte must be the message ID
 				b = _inStream.read();
-				if (b != MSGID_PING && b != MSGID_DATA){
-					Log.e(TAG, "Unexpected MSGID. Received: "+ b);
-					errorCount++;
-					errorRate=(errorCount/(double) msgCount)*100.0;
-					Log.e(TAG, "Error rate: % "+ errorRate);
-					return;
+				if (b != ArduinoMessage.MSGID_PING && b != ArduinoMessage.MSGID_DATA){
+					String detailMessage = "Unexpected MSGID. Received: "+ b;
+					throw new BadMessageFrameFormat(detailMessage);
 				} else {
 					MSG_TYPE = b;
 				}
@@ -187,7 +270,8 @@ public class ArduinoThread extends BTDeviceThread{
 				b = _inStream.read();
 				buffer[bufferIndex++] = (byte) b; // append Frame Seq. number
 
-
+				/* TODO Move this block elsewhere
+				 
 				// Check if the frame sequence number is the expected (if not, a message may have been lost)
 				switch (MSG_TYPE) {
 				case MSGID_PING:
@@ -210,16 +294,14 @@ public class ArduinoThread extends BTDeviceThread{
 					else
 						dataSeqNum = 1;
 					break;
-				}
+				}*/
 
 				// The next byte must be the expected data length code
 				b = _inStream.read();
 				buffer[bufferIndex++] = (byte) b; //append DLC
 
-				payloadBytesRemaining = --b; // Arduino UNO's problem?? WTF
+				payloadBytesRemaining = b; // Arduino UNO's problem?? WTF
 				//payloadBytesRemaining = b;
-
-				//Log.v(TAG, "Expected payload length: "+DLC+" bytes");
 
 				while ( (payloadBytesRemaining--) > 0 ) {
 					buffer[bufferIndex++] = (byte) (b = _inStream.read());
@@ -230,21 +312,19 @@ public class ArduinoThread extends BTDeviceThread{
 					buffer[bufferIndex++] = (byte) (b = _inStream.read());
 
 				// The next byte must be the end of text indicator 
-				if ((b = _inStream.read()) != ETX ){
-					Log.e(TAG, "ETX incorrect. Received: "+b+". Expected"+ETX);
-					errorCount++;
-					errorRate=(errorCount/(double) msgCount)*100.0;
-					Log.e(TAG, "Error rate: % "+ errorRate);
-					return;
+				if ((b = _inStream.read()) != ArduinoMessage.ETX ){
+					String detailMessage = "ETX incorrect. Received: "+b;
+					throw new BadMessageFrameFormat(detailMessage);
 				}
 
 				buffer[bufferIndex++] = (byte) b; // append ETX at the end of the buffer 
 
-				//Log.d(TAG, "ArduinoThread: read "+Integer.toString(bufferIndex)+" bytes");
-
 				byte[] auxBuff = new byte[bufferIndex];
 				System.arraycopy(buffer, 0, auxBuff, 0, bufferIndex);
+				
+				ArduinoMessage readMessage = new ArduinoMessage(devName, auxBuff);
 
+				
 				// Notify the main activity that a message was read 
 				Message sendMsg = new Message();
 				Bundle myDataBundle = new Bundle();
@@ -253,7 +333,7 @@ public class ArduinoThread extends BTDeviceThread{
 				myDataBundle.putLong("TIMESTAMP", timestamp);
 				myDataBundle.putLong("MSG_COUNT", msgCount);
 				myDataBundle.putLong("ERROR_COUNT", errorCount);
-				if(MSG_TYPE == MSGID_PING){
+				if(MSG_TYPE == ArduinoMessage.MSGID_PING){
 					myDataBundle.putLong("PINGSENTTIME", pingSentTime);
 					sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_PING, (int) elapsedTime, bufferIndex, auxBuff);
 				}else
@@ -261,6 +341,10 @@ public class ArduinoThread extends BTDeviceThread{
 				sendMsg.setData(myDataBundle);
 				sendMsg.sendToTarget();
 
+			} catch (BadMessageFrameFormat e){
+				errorCount++;
+				errorRate=(errorCount/(double) msgCount)*100.0;
+				Log.e(TAG, "Error rate: % "+ errorRate);
 			} catch (IOException e) {
 				Log.e(TAG, "IOException reading socket for "+myBluetoothDevice.getName());
 				//e.printStackTrace();
@@ -272,14 +356,13 @@ public class ArduinoThread extends BTDeviceThread{
 				myDataBundle.putString("MAC", this.getDeviceMAC());
 				sendMsg.setData(myDataBundle);
 				sendMsg.sendToTarget();
-				
+
 				connected = false;
 
 			} catch (ArrayIndexOutOfBoundsException e){
 				Log.e(TAG, "Message lost. Received too much data");
 				e.printStackTrace();
-			}
-
+			} 
 			try {
 				Thread.sleep(9);
 			} catch (InterruptedException e) {
@@ -288,15 +371,6 @@ public class ArduinoThread extends BTDeviceThread{
 			}
 		}
 	}
-
-	/**
-	 * Gets the handler to send messages to the robot
-	 * @return handler 
-	 */
-	public Handler getHandler(){
-		return arduinoHandler;
-	}
-
 
 	long pingSentTime; 
 	int pingFrameSeqNum = 1;
@@ -310,77 +384,30 @@ public class ArduinoThread extends BTDeviceThread{
 		//Check if its a PING command
 		if(cmd.contentEquals("p")){
 			pingSentTime = System.currentTimeMillis();
-			int index = 0;
-			int size = 0;
-			byte[] outBuffer = new byte[16];
-			outBuffer[index++] = STX;
-			outBuffer[index++] = MSGID_PING;
-			outBuffer[index++] = (byte) pingFrameSeqNum;
-			size = "".getBytes().length+1;
-			outBuffer[index++] = (byte) size;
-			for(byte b : "".getBytes())
-				outBuffer[index++] = b;
-			long CRC = getChecksum("".getBytes());
-			for( byte b : longToBytes(CRC))
-				outBuffer[index++] = b;
-			outBuffer[index++] = ETX;
+			ArduinoMessage myMsg = new ArduinoMessage();
+			List<Byte> outBuffer = myMsg.pingMessage(pingFrameSeqNum);
 
+			byte[] auxBuff = new byte[outBuffer.size()];
+			for(int i=0; i<outBuffer.size(); i++)
+				auxBuff[i] = outBuffer.get(i);
 			try {
-				
-				//TODO el arrayCopy no resuelve el problema, y ocupa memoria -> quitarlo
-				
-				byte[] auxBuff = new byte[index];
-				System.arraycopy(outBuffer, 0, auxBuff, 0, index);
-				
 				String aux = Arrays.toString(auxBuff);
 				Log.v(TAG, "Sending ping nº "+pingFrameSeqNum+"--"+aux);
 				//Log.v(TAG, "Sending ping nº "+pingFrameSeqNum);
-				_outStream.write(auxBuff, 0, index);
+				_outStream.write(auxBuff, 0, outBuffer.size());
 			} catch (IOException e) {
 				Log.e(TAG, "Exception writting to the Arduino socket");
 				e.printStackTrace();
-			} catch (Exception e) {
-				Log.e(TAG, "General exception in the run() method");
-				e.printStackTrace();
 			}
-			
+
 			pingFrameSeqNum++;
 			if(pingFrameSeqNum>99)
 				pingFrameSeqNum = 1;
 		}
 	}
 
-	/**
-	 * Calculates the CRC (Cyclic Redundancy Check) checksum value of the given bytes
-	 * according to the CRC32 algorithm.
-	 * @param bytes 
-	 * @return The CRC32 checksum
-	 */
-	private Checksum checksum;
-	private long getChecksum(byte bytes[]){
 
-		checksum = new CRC32();
 
-		// update the current checksum with the specified array of bytes
-		checksum.update(bytes, 0, bytes.length);
-
-		// get the current checksum value
-		long checksumValue = checksum.getValue();
-
-		return checksumValue;
-	}
-
-	public byte[] longToBytes(long x) {
-		ByteBuffer buffer = ByteBuffer.allocate(8);
-		buffer.order(ByteOrder.LITTLE_ENDIAN);
-		buffer.putLong(x);
-
-		byte[] result = new byte[4];
-		byte[] b = buffer.array();
-		for(int i=0; i<4; i++)
-			result[i] = b[i];
-		return result;
-	}
 
 
 }
