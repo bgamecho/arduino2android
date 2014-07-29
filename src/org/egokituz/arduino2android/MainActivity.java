@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Set;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
@@ -50,6 +52,8 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -69,11 +73,8 @@ public class MainActivity extends Activity {
 	public static final int MESSAGE_CPU_USAGE = 5;
 	public static final int MESSAGE_PING = 6;
 
-	Button refreshButton, connectButton, disconnectButton,startButton,finButton;
 	Spinner spinnerBluetooth;
 	ListView devicesListView;
-	Button pingButton;
-	TextView tvLdr;
 
 	private String selected_arduinoMAC;
 
@@ -95,9 +96,7 @@ public class MainActivity extends Activity {
 		ardionoOn = false;
 		finishApp = false;
 
-		setButtons();
-		populateDeviceListView();
-		updateSpinner();
+		//populateDeviceListView();
 
 		_BTManager = new BTManagerThread(this, arduinoHandler);
 		_BatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
@@ -106,99 +105,12 @@ public class MainActivity extends Activity {
 
 	}
 
-	private void setButtons() {
-		// TODO Auto-generated method stub
-
-		refreshButton = (Button) findViewById(R.id.buttonRefresh);		
-		refreshButton.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				// TODO Auto-generated method stub
-				updateSpinner();
-				Log.v(TAG, "Arduino Activity updateSpinner");
-			}
-		});
-
-		spinnerBluetooth = (Spinner) findViewById(R.id.spinnerBluetooth);
-		spinnerBluetooth.setOnTouchListener(new OnTouchListener() {
-			@Override
-			public boolean onTouch(View v, MotionEvent event) {
-				//				updateSpinner();
-				//				Log.v(TAG, "Arduino Activity updateSpinner");
-				return false;
-			}
-		});
-		spinnerBluetooth.setOnItemSelectedListener(new OnItemSelectedListener() {
-			@Override
-			public void onItemSelected(AdapterView<?> parent, View view,
-					int position, long id) {
-				//TODO instead of passing the BT-device as String (Name+MAC), send a BluetoothDevice object
-				String myMAC = spinnerBluetooth.getSelectedItem().toString();
-				selected_arduinoMAC = myMAC.substring(myMAC.length()-17);
-			}
-
-			@Override
-			public void onNothingSelected(AdapterView<?> parent) {
-			}
-
-		});
-
-		connectButton = (Button) findViewById(R.id.buttonConnect);
-		connectButton.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View v) {
-				//connectToArduino();
-			}
-		});
-
-		disconnectButton = (Button) findViewById(R.id.buttonDisconnect);
-		disconnectButton.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View v) {
-				//disconnectAduino();
-			}
-		});
-
-		startButton = (Button) findViewById(R.id.buttonStart);
-		startButton.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View v) {
-				startCommand();
-			}
-		});
-
-		finButton =(Button) findViewById(R.id.buttonFin);
-		finButton.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View v) {
-				finalizeCommand();
-			}
-		});
-
-		pingButton = (Button) findViewById(R.id.buttonPing);
-		pingButton.setOnClickListener(
-				new OnClickListener() {
-
-					@Override
-					public void onClick(View v) {
-						pingCommand();
-					}
-				});
-
-		tvLdr = (TextView) findViewById(R.id.textViewLDRvalue);
-
-	}
-
 	@Override 
 	public void onStart(){
 		Log.v(TAG, "Arduino Activity --OnStart()--");
 		if(!_BTManager.isAlive()){
 			_BTManager.start();
-			
+
 			// Set the Bluetooth Manager's plan  
 			Message sendMsg;
 			sendMsg = _BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,BTManagerThread.DELAYED_CONNECT); // TODO change the obj of the message
@@ -206,6 +118,9 @@ public class MainActivity extends Activity {
 			sendMsg.arg2 = BTManagerThread.ALLTOGETHER_CONNECT;
 			sendMsg.sendToTarget();
 		}
+
+		setButtons();
+
 		if(!_BatteryMonitor.isAlive())
 			_BatteryMonitor.start();
 		if(!_cpuMonitor.isAlive())
@@ -291,7 +206,6 @@ public class MainActivity extends Activity {
 			case RESULT_OK:
 				Log.v(TAG, "Jay! User enabled Bluetooth!");
 				this.spinnerBluetooth.setClickable(true);
-				updateSpinner();
 				break;
 			case RESULT_CANCELED:
 				Log.v(TAG, "User  did not enable Bluetooth");
@@ -302,9 +216,64 @@ public class MainActivity extends Activity {
 		}
 	}
 
+
+	private void setButtons(){
+		RadioButton discoveryMode = (RadioButton) findViewById(R.id.radio_discovery_initial);
+		discoveryMode.setChecked(true);
+
+		RadioButton connectionMode = (RadioButton) findViewById(R.id.radio_progressive);
+		connectionMode.setChecked(true);
+
+		RadioButton connectionTiming = (RadioButton) findViewById(R.id.radio_delayed);
+		connectionTiming.setChecked(true);
+	}
+
+	public void setPlanButton(View view){
+
+
+		RadioGroup discoveryGroup = (RadioGroup) findViewById(R.id.discoveryGroup);
+		int discoveryRadioButtonID = discoveryGroup.getCheckedRadioButtonId();
+		switch (discoveryRadioButtonID) {
+		case R.id.radio_discovery_initial:
+
+			break;
+		case R.id.radio_discovery_continuous:
+
+			break;
+		case R.id.radio_discovery_periodic:
+
+			break;
+		}
+
+		RadioGroup connectionModeGroup = (RadioGroup) findViewById(R.id.connectionModeGroup);
+		int connModeRadioButtonID = connectionModeGroup.getCheckedRadioButtonId();
+		switch (connModeRadioButtonID) {
+		case R.id.radio_progressive:
+
+			break;
+		case R.id.radio_alltogether:
+
+			break;
+		}
+
+		RadioGroup connectionTimingGroup = (RadioGroup) findViewById(R.id.connectionTimingGroup);
+		int connTimingRadioButtonID = connectionTimingGroup.getCheckedRadioButtonId();
+		switch (connTimingRadioButtonID) {
+		case R.id.radio_immediate_stop:
+
+			break;
+		case R.id.radio_immediate_while:
+
+			break;
+		case R.id.radio_delayed:
+
+			break;
+		}
+	}
+
 	/**
 	 * Updates the ListView containing the connected Arduinos
-	 */
+
 	private void populateDeviceListView() {
 		devicesListView = (ListView) findViewById(R.id.listViewDevices);
 
@@ -315,34 +284,22 @@ public class MainActivity extends Activity {
 					android.R.layout.simple_list_item_1, myDeviceList);
 			devicesListView.setAdapter(listViewArrayAdapter);
 		}
-
-
-
-	}
+	}*/
 
 	//Updates the items of the Bluetooth devices' spinner
-	private void updateSpinner(){
-		String[] myDeviceList = this.getBluetoothDevices();
+	public void updateSpinner(View view){
+		// TODO update spinned with running threads
+		try {
+			ArrayList<String> threads = new ArrayList<String>();
+			Collections.addAll(threads, _BTManager.getConnectedArduinos());
+			ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+					android.R.layout.simple_spinner_item, threads);
 
-		if(myDeviceList!=null){
-
-
-
-			for(int i=0;i<myDeviceList.length; i++){
-				if(!myDeviceList[i].startsWith("BT-") || !myDeviceList[i].startsWith("ROB") )
-					myDeviceList[i].length();
-			}
-
-			if(myDeviceList != null){
-				ArrayAdapter<String> spinnerArrayAdapter = new ArrayAdapter<String>(this, 
-						android.R.layout.simple_spinner_item, myDeviceList);
-				spinnerArrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); // The drop down view
-				spinnerBluetooth.setAdapter(spinnerArrayAdapter);
-				spinnerBluetooth.setSelection(getIndex(spinnerBluetooth, "BT-"));
-				this.spinnerBluetooth.setClickable(true);
-			}else
-				this.spinnerBluetooth.setClickable(false);
-
+			Spinner devSpin = (Spinner)findViewById(R.id.spinnerBluetooth);
+			devSpin.setAdapter(adapter);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
@@ -483,11 +440,6 @@ public class MainActivity extends Activity {
 
 	}
 
-
-	public void modifyText(String myLdr){
-		tvLdr.setText(myLdr);
-	}
-
 	/**
 	 * Handler connected with the BTManager Threads: 
 	 */
@@ -500,7 +452,7 @@ public class MainActivity extends Activity {
 		long timestamp;
 		long msgCount, errCount;
 		MessageReading msgReading;
-		
+
 		@SuppressLint("NewApi")
 		@Override
 		public void handleMessage(Message msg) {
@@ -516,7 +468,7 @@ public class MainActivity extends Activity {
 				devName =  msg.getData().getString("NAME");
 				devMAC =  msg.getData().getString("MAC");
 				timestamp = msg.getData().getLong("TIMESTAMP");
-				
+
 
 				msgReading = new MessageReading(readBuf);
 				//String payload = msgReading.getPayload();
@@ -525,7 +477,6 @@ public class MainActivity extends Activity {
 				sendMsg = timestamp+" "+devName+" "+elapsedMilis+"ms "+bytes+" bytes";
 				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_TO_LOG_FILE, sendMsg).sendToTarget();
 
-				//tvLdr.setText(readMessage);
 				break;
 			case MESSAGE_PING:
 				// Message received from a running Arduino Thread
@@ -543,7 +494,7 @@ public class MainActivity extends Activity {
 				// If it's a ping message, the field PINGSENTTIME is relevant
 				long pingSentTime = msg.getData().getLong("PINGSENTTIME");
 				long pingTime = timestamp-pingSentTime;
-				
+
 				msgReading = new MessageReading(readBuf);
 				int frNum = msgReading.getFrameNum();
 				Log.v(TAG,"Ping nº "+frNum+" time: "+pingTime);
@@ -696,14 +647,14 @@ public class MainActivity extends Activity {
 				 * we'll catch the exception */
 				Log.d(TAG, "Failure building MessageReading from byte buffer, probably an incopmplete or corrupted buffer");
 				e.printStackTrace();
-				
+
 			}
 		}
 
 		public String getPayload() {
 			return payload;
 		}
-		
+
 		public int getFrameNum(){
 			return frameSeqNum;
 		}

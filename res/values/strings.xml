@@ -3,6 +3,23 @@
 
     <string name="app_name">Arduino2android</string>
     <string name="hello_world">Hello world!</string>
-    <string name="sensorLabel">LDR value: </string>
+    
+    <string name="planLabel">Plan Settings</string>
+        
+    <string name="discoveryLabel">Discovery: </string>
+    <string name="initial">Initial</string>
+    <string name="continuous">Continuous</string>
+    <string name="periodic">Periodic</string>
+    
+    <string name="connectionModeLabel">Connection: </string>
+    <string name="progressive">Progressive</string>
+    <string name="alltogether">All together</string>
+    
+    <string name="timingLabel">Conn. Timing: </string>
+    <string name="immediateStop">Immediate (stop discovery)</string>
+    <string name="immediateWhile">Immediate (while discovering)</string>
+    <string name="delayed">Delayed</string>
 
+	<string name="refreshButton">Refresh list</string>
+	<string name="setPlanButton">Set plan</string>
 </resources>
