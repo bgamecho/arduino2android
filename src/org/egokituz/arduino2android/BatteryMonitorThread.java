@@ -68,7 +68,7 @@ public class BatteryMonitorThread extends Thread{
 	
 	public BatteryMonitorThread(Context context, Handler handler){
 		this.setName(TAG);
-		Log.v(TAG, "BatteryMonitorThread Constructor start");
+		//Log.v(TAG, "BatteryMonitorThread Constructor start");
 		
 		mainHandler = handler;
 		mainCtx = context;

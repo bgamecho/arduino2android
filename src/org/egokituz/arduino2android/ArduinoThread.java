@@ -23,6 +23,7 @@ package org.egokituz.arduino2android;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -134,6 +135,9 @@ public class ArduinoThread extends BTDeviceThread{
 	private long timestamp;
 
 	private int pingSeqNum=1, dataSeqNum=0;
+	
+	private long errorCount = 0L, msgCount = 0L;
+	private double errorRate;
 
 
 	/**
@@ -155,6 +159,8 @@ public class ArduinoThread extends BTDeviceThread{
 					// Keep looking for STX
 					Log.v(TAG, "Waiting for "+STX+". Read: "+b);
 				}
+				
+				msgCount++;
 
 				timestamp = System.currentTimeMillis();
 
@@ -168,6 +174,9 @@ public class ArduinoThread extends BTDeviceThread{
 				b = _inStream.read();
 				if (b != MSGID_PING && b != MSGID_DATA){
 					Log.e(TAG, "Unexpected MSGID. Received: "+ b);
+					errorCount++;
+					errorRate=(errorCount/(double) msgCount)*100.0;
+					Log.e(TAG, "Error rate: % "+ errorRate);
 					return;
 				} else {
 					MSG_TYPE = b;
@@ -223,6 +232,9 @@ public class ArduinoThread extends BTDeviceThread{
 				// The next byte must be the end of text indicator 
 				if ((b = _inStream.read()) != ETX ){
 					Log.e(TAG, "ETX incorrect. Received: "+b+". Expected"+ETX);
+					errorCount++;
+					errorRate=(errorCount/(double) msgCount)*100.0;
+					Log.e(TAG, "Error rate: % "+ errorRate);
 					return;
 				}
 
@@ -239,6 +251,8 @@ public class ArduinoThread extends BTDeviceThread{
 				myDataBundle.putString("NAME", this.getDeviceName());
 				myDataBundle.putString("MAC", this.getDeviceMAC());
 				myDataBundle.putLong("TIMESTAMP", timestamp);
+				myDataBundle.putLong("MSG_COUNT", msgCount);
+				myDataBundle.putLong("ERROR_COUNT", errorCount);
 				if(MSG_TYPE == MSGID_PING){
 					myDataBundle.putLong("PINGSENTTIME", pingSentTime);
 					sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_PING, (int) elapsedTime, bufferIndex, auxBuff);
@@ -298,26 +312,30 @@ public class ArduinoThread extends BTDeviceThread{
 			pingSentTime = System.currentTimeMillis();
 			int index = 0;
 			int size = 0;
-			byte[] outBuffer = new byte[255];
+			byte[] outBuffer = new byte[16];
 			outBuffer[index++] = STX;
 			outBuffer[index++] = MSGID_PING;
-			if(pingFrameSeqNum>99)
-				pingFrameSeqNum = 1;
-			outBuffer[index++] = (byte) pingFrameSeqNum++;
-			size = "p".getBytes().length+1;
+			outBuffer[index++] = (byte) pingFrameSeqNum;
+			size = "".getBytes().length+1;
 			outBuffer[index++] = (byte) size;
-			for(byte b : "p".getBytes())
+			for(byte b : "".getBytes())
 				outBuffer[index++] = b;
-			long CRC = getChecksum("p".getBytes());
+			long CRC = getChecksum("".getBytes());
 			for( byte b : longToBytes(CRC))
 				outBuffer[index++] = b;
 			outBuffer[index++] = ETX;
 
 			try {
-				//buffer[0]= (byte) currentCommand.charAt(0);
-
-				//Log.v(TAG, "Sending ping: "+index+" bytes. CRC: "+(byte) CRC+" ("+longToBytes(CRC).length+" bytes)");
-				_outStream.write(outBuffer, 0, index);
+				
+				//TODO el arrayCopy no resuelve el problema, y ocupa memoria -> quitarlo
+				
+				byte[] auxBuff = new byte[index];
+				System.arraycopy(outBuffer, 0, auxBuff, 0, index);
+				
+				String aux = Arrays.toString(auxBuff);
+				Log.v(TAG, "Sending ping nº "+pingFrameSeqNum+"--"+aux);
+				//Log.v(TAG, "Sending ping nº "+pingFrameSeqNum);
+				_outStream.write(auxBuff, 0, index);
 			} catch (IOException e) {
 				Log.e(TAG, "Exception writting to the Arduino socket");
 				e.printStackTrace();
@@ -325,6 +343,10 @@ public class ArduinoThread extends BTDeviceThread{
 				Log.e(TAG, "General exception in the run() method");
 				e.printStackTrace();
 			}
+			
+			pingFrameSeqNum++;
+			if(pingFrameSeqNum>99)
+				pingFrameSeqNum = 1;
 		}
 	}
 
@@ -334,9 +356,10 @@ public class ArduinoThread extends BTDeviceThread{
 	 * @param bytes 
 	 * @return The CRC32 checksum
 	 */
+	private Checksum checksum;
 	private long getChecksum(byte bytes[]){
 
-		Checksum checksum = new CRC32();
+		checksum = new CRC32();
 
 		// update the current checksum with the specified array of bytes
 		checksum.update(bytes, 0, bytes.length);

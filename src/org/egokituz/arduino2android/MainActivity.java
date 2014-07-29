@@ -196,8 +196,16 @@ public class MainActivity extends Activity {
 	@Override 
 	public void onStart(){
 		Log.v(TAG, "Arduino Activity --OnStart()--");
-		if(!_BTManager.isAlive())
+		if(!_BTManager.isAlive()){
 			_BTManager.start();
+			
+			// Set the Bluetooth Manager's plan  
+			Message sendMsg;
+			sendMsg = _BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,BTManagerThread.DELAYED_CONNECT); // TODO change the obj of the message
+			sendMsg.arg1 = BTManagerThread.INITIAL_DISCOVERY;
+			sendMsg.arg2 = BTManagerThread.ALLTOGETHER_CONNECT;
+			sendMsg.sendToTarget();
+		}
 		if(!_BatteryMonitor.isAlive())
 			_BatteryMonitor.start();
 		if(!_cpuMonitor.isAlive())
@@ -484,12 +492,14 @@ public class MainActivity extends Activity {
 	 * Handler connected with the BTManager Threads: 
 	 */
 	public Handler arduinoHandler = new Handler() {
-		long timestamp;
 		String sendMsg;
 		byte[] readBuf;
 		int elapsedMilis;
 		int bytes;
 		String devName, devMAC;
+		long timestamp;
+		long msgCount, errCount;
+		MessageReading msgReading;
 		
 		@SuppressLint("NewApi")
 		@Override
@@ -506,9 +516,9 @@ public class MainActivity extends Activity {
 				devName =  msg.getData().getString("NAME");
 				devMAC =  msg.getData().getString("MAC");
 				timestamp = msg.getData().getLong("TIMESTAMP");
+				
 
-				@SuppressWarnings("unused")
-				MessageReading msgReading = new MessageReading(readBuf);
+				msgReading = new MessageReading(readBuf);
 				//String payload = msgReading.getPayload();
 
 				// write to log file
@@ -527,11 +537,16 @@ public class MainActivity extends Activity {
 				devName =  msg.getData().getString("NAME");
 				devMAC =  msg.getData().getString("MAC");
 				timestamp = msg.getData().getLong("TIMESTAMP");
+				msgCount = msg.getData().getLong("MSG_COUNT");
+				errCount = msg.getData().getLong("ERROR_COUNT");
 
 				// If it's a ping message, the field PINGSENTTIME is relevant
 				long pingSentTime = msg.getData().getLong("PINGSENTTIME");
 				long pingTime = timestamp-pingSentTime;
-				Log.v(TAG,"Ping time: "+pingTime);
+				
+				msgReading = new MessageReading(readBuf);
+				int frNum = msgReading.getFrameNum();
+				Log.v(TAG,"Ping nº "+frNum+" time: "+pingTime);
 
 				// write to log file
 				sendMsg = timestamp+" "+devName+" "+pingTime;
@@ -545,7 +560,7 @@ public class MainActivity extends Activity {
 				// This message implies that a request to create an Arduino Thread
 
 				BluetoothDevice newDevice = (BluetoothDevice) msg.obj;
-				//Log.v(TAG, "Dispatching thread creation for "+newDevice.getName());
+				Log.v(TAG, "Dispatching thread creation for "+newDevice.getName());
 				BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
 				thDispatcher.execute(newDevice);
 
@@ -620,12 +635,11 @@ public class MainActivity extends Activity {
 			}
 		}
 
-
 		@Override
 		protected void onPostExecute(String result) {
 			super.onPostExecute(result);
 			// Update the ListView containing the connected Arduinos
-			//populateDeviceListView();
+			//populateDeviceListView(); //ERROR: only the main thread/activity can manipulate the layout
 		}
 
 
@@ -688,6 +702,10 @@ public class MainActivity extends Activity {
 
 		public String getPayload() {
 			return payload;
+		}
+		
+		public int getFrameNum(){
+			return frameSeqNum;
 		}
 
 		/**
