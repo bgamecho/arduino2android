@@ -97,8 +97,8 @@ void loop()
       payload+= "-LDR:";
       payload+=ldr;
       payload+="#";
-      payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ac imperdiet lorem, eget aliquet elit. Pellentesque feugiat ullamcorper eros, id cursus mauris tempor nec. Phasellus sem mi, ultrices vel lectus vel, facilisis cursus nisi. Maecenas consequat tortor ut ornare faucibus. Nullam dignissim lobortis sagittis. Aliquam vel commodo justo. Nam facilisis nunc faucibus lacus cursus porta. Nulla sed dignissim erat. Vestibulum pretium diam rhoncus turpis volutpat, sagittis egestas justo volutpat. ";
-      //payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit.Lorem ipsum dolor sit amet, consectetur adipiscing elit.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed elit dolor, venenatis ac magna at, dapibus ultricies tellus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Fusce pharetra turpis non leo pulvinar, at elementum urna hendrerit. ";
+      //payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ac imperdiet lorem, eget aliquet elit. Pellentesque feugiat ullamcorper eros, id cursus mauris tempor nec. Phasellus sem mi, ultrices vel lectus vel, facilisis cursus nisi. Maecenas consequat tortor ut ornare faucibus. Nullam dignissim lobortis sagittis. Aliquam vel commodo justo. Nam facilisis nunc faucibus lacus cursus porta. Nulla sed dignissim erat. Vestibulum pretium diam rhoncus turpis volutpat, sagittis egestas justo volutpat. ";
+      payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
      
       int length = payload.length()+1; // Length (with one extra character for the null terminator)
       char aux[length];
@@ -149,7 +149,7 @@ boolean check_clock()
 //Timer2 Overflow Interrupt Vector, called every 1ms
 ISR(TIMER2_OVF_vect) {
   ticks++;               //Increments the interrupt counter
-  if(ticks > 999){
+  if(ticks > 99){
     ticks = 0;           //Resets the interrupt counter
     flag_seconds = true;
     seconds++;

@@ -297,7 +297,7 @@ public class ArduinoThread extends Thread{
 					if(seqNum != expectedDataSeqNum){
 						Log.e(TAG, "Unexpected Data Frame seq. number");
 						Log.e(TAG, "Received:"+b+" Expected: "+expectedDataSeqNum);
-						expectedDataSeqNum = seqNum;
+						expectedDataSeqNum = seqNum+1;
 					}else if(seqNum<99)
 						expectedDataSeqNum = seqNum+1;
 					else
@@ -398,8 +398,8 @@ public class ArduinoThread extends Thread{
 		case ArduinoMessage.MSGID_DATA:
 			dataQueue.add(msg);
 			if(dataQueue.size()>99){
-				mainHandler.obtainMessage(MainActivity.MESSAGE_DATA_READ, dataQueue).sendToTarget();
-				pingQueue.clear();
+				mainHandler.obtainMessage(MainActivity.MESSAGE_DATA_READ, dataQueue.clone()).sendToTarget();
+				dataQueue.clear();
 			}
 			break;
 		}

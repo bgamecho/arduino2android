@@ -361,18 +361,14 @@ private void createHandler(){
 				ArrayList<String> pingQueue = (ArrayList<String>) msg.obj;
 				// write to log file
 				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_PING, pingQueue).sendToTarget();
-
 				break;
 				
 			case MESSAGE_DATA_READ:
 				// Message received from a running Arduino Thread
 				// This message implies that 99 well formed DATA messages were read by an Arduino Thread
 
-				ArrayList<String> dataQueue = new ArrayList<>();
-				
-				
-				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_TO_LOG_FILE, dataQueue).sendToTarget();
-
+				ArrayList<String> dataQueue = (ArrayList<String>) msg.obj;
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_DATA, dataQueue).sendToTarget();
 				break;
 
 			case MESSAGE_BATTERY_STATE_CHANGED:

@@ -45,7 +45,7 @@ public class LoggerThread extends Thread{
 
 	private static final String TAG = "Logger";
 
-	protected static final int MESSAGE_WRITE_TO_LOG_FILE = 0;
+	protected static final int MESSAGE_WRITE_DATA = 0;
 	protected static final int MESSAGE_WRITE_BATTERY = 1;
 	protected static final int MESSAGE_CPU = 2;
 	protected static final int MESSAGE_PING = 3;
@@ -73,7 +73,7 @@ public class LoggerThread extends Thread{
 					appendLog("ping.txt",pingLine);
 				}
 				break;
-			case MESSAGE_WRITE_TO_LOG_FILE:
+			case MESSAGE_WRITE_DATA:
 				ArrayList<String> dataQueue = (ArrayList<String>) msg.obj;
 				for (String dataLine : dataQueue) {
 					appendLog("data.txt",dataLine);	

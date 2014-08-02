@@ -297,40 +297,40 @@ public class BTManagerThread extends Thread{
 						newDevicesList.add(device);
 					}
 					Log.v(TAG, "New device found: "+devId);
-
-					switch (connectionTiming) {
-					case IMMEDIATE_STOP_DISCOVERY_CONNECT:
-						// Stop discovery and fetch new devices immediately
-						Log.v(TAG, "Canceling discovery and fetching... ");
-						_BluetoothAdapter.cancelDiscovery();
-						newArduinoAvalable = _plannerThread.fetchDevices();
-						if(newArduinoAvalable)
-							_plannerThread.connectAvalaiableArduinos();
-						break;
-					case IMMEDIATE_WHILE_DISCOVERING_CONNECT:
-						// While discovering, fetch new devices
-						Log.v(TAG, "Fetching while discovering... ");
-						newArduinoAvalable = _plannerThread.fetchDevices();
-						if(newArduinoAvalable)
-							_plannerThread.connectAvalaiableArduinos();
-						break;
-					case DELAYED_CONNECT:
-						// Do nothing (when discovery is finished the fetching will be done)
-						Log.v(TAG, "The devices will be fetched when discovery is finished.");
-						break;
-					}
 				}
+				switch (connectionTiming) {
+				case IMMEDIATE_STOP_DISCOVERY_CONNECT:
+					// Stop discovery and fetch new devices immediately
+					Log.v(TAG, "Canceling discovery and fetching... ");
+					_BluetoothAdapter.cancelDiscovery();
+					newArduinoAvalable = _plannerThread.fetchDevices();
+					if(newArduinoAvalable)
+						_plannerThread.connectAvalaiableArduinos();
+					break;
+				case IMMEDIATE_WHILE_DISCOVERING_CONNECT:
+					// While discovering, fetch new devices
+					Log.v(TAG, "Fetching while discovering... ");
+					newArduinoAvalable = _plannerThread.fetchDevices();
+					if(newArduinoAvalable)
+						_plannerThread.connectAvalaiableArduinos();
+					break;
+				case DELAYED_CONNECT:
+					// Do nothing (when discovery is finished the fetching will be done)
+					Log.v(TAG, "The devices will be fetched when discovery is finished.");
+					break;
+				}
+
 
 				break;
 			case BluetoothDevice.ACTION_ACL_CONNECTED:
 				//TODO Low-level (ACL) connection has been established with a remote BT device
 				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				deviceName = device.getName()+"-"+device.getAddress();
+				deviceName = device.getName();
 				Log.v(TAG, "connection established with "+deviceName);
 
 				// Notify the main activity about the connection:
 				timestamp = System.currentTimeMillis();
-				msg = timestamp+" "+deviceName+" connected";
+				msg = timestamp+" "+deviceName+"-connected";
 				mainHandler.obtainMessage(MainActivity.MESSAGE_BT_EVENT, msg).sendToTarget();
 
 				break;
@@ -346,12 +346,12 @@ public class BTManagerThread extends Thread{
 			case BluetoothDevice.ACTION_ACL_DISCONNECTED:
 				// When a remote device has been disconnected, discard it
 				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				deviceName = device.getName()+"-"+device.getAddress();
+				deviceName = device.getName();
 				Log.v(TAG, "Disconnected "+deviceName);
 
 				// Notify the main activity about the disconnection:
 				timestamp = System.currentTimeMillis();
-				msg = timestamp+" "+deviceName+" disconnected";
+				msg = timestamp+" "+deviceName+"-disconnected";
 				mainHandler.obtainMessage(MainActivity.MESSAGE_BT_EVENT, msg).sendToTarget();
 
 				finalizeArduinoThread(device.getAddress());
