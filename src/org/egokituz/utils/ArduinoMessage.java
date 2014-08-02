@@ -24,15 +24,17 @@ public class ArduinoMessage{
 	public static final int MSGID_DATA = 0x27; // Message ID: Data type
 	public static  final int ETX = 0x03; // End of Text flag
 
-	private String devName = "";
+	public String devName = "";
+	public String devMAC = "";
+	public long timestamp;
 
 	private byte stx;
 	private byte msgId;
 	private byte frameSeqNum;
 	private byte dlc;
 	private String payload;
-	private byte etx;
 	private byte crc_bytes[] = new byte[8];
+	private byte etx;
 	private long crc;
 	//private ByteBuffer auxBuffer = ByteBuffer.allocate(Long.SIZE);
 	
@@ -108,6 +110,10 @@ public class ArduinoMessage{
 		return outBuffer;
 	}
 
+	public int size(){
+		int result = 1+1+1+4+dlc+4+1; //STX + ID + Seq.Num + 4*DLC + payload size + 4*CRC + ETX
+		return result;
+	}
 
 	public String getPayload() {
 		return payload;
@@ -115,6 +121,10 @@ public class ArduinoMessage{
 
 	public int getFrameNum(){
 		return frameSeqNum;
+	}
+	
+	public int getMessageID(){
+		return msgId;
 	}
 
 	/**

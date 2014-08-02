@@ -132,7 +132,7 @@ void sendMessage(int MSGID, char payload[], int length)
   miSerial.write(STX);
   miSerial.write(MSGID);
   miSerial.write(frameNum);
-  miSerial.write(length);
+  miSerial.write(--length);
   miSerial.write(payload);
   miSerial.write(buf,sizeof(buf));
   miSerial.write(ETX);

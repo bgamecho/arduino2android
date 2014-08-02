@@ -27,6 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 
 import android.content.Context;
 import android.content.Intent;
@@ -49,6 +50,10 @@ public class LoggerThread extends Thread{
 	protected static final int MESSAGE_CPU = 2;
 	protected static final int MESSAGE_PING = 3;
 
+	protected static final int MESSAGE_ERROR = 4;
+
+	protected static final int MESSAGE_EVENT = 5;
+
 	private Context mainCtx;
 	private Handler mainHandler;
 
@@ -57,13 +62,22 @@ public class LoggerThread extends Thread{
 
 	public Handler logHandler = new Handler(){
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public void handleMessage(Message msg) {
 			String line;
 			switch (msg.what) {
+			case MESSAGE_PING:
+				ArrayList<String> pingQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone(); //clone() or otherwise concurrent modification exception
+				for (String pingLine : pingQueue) {
+					appendLog("ping.txt",pingLine);
+				}
+				break;
 			case MESSAGE_WRITE_TO_LOG_FILE:
-				line = (String) msg.obj;
-				appendLog("arduinoMsg.txt",line);
+				ArrayList<String> dataQueue = (ArrayList<String>) msg.obj;
+				for (String dataLine : dataQueue) {
+					appendLog("data.txt",dataLine);	
+				}
 				break;
 			case MESSAGE_WRITE_BATTERY:
 				line = (String) msg.obj;
@@ -73,9 +87,13 @@ public class LoggerThread extends Thread{
 				line = (String) msg.obj;
 				appendLog("cpu.txt",line);
 				break;
-			case MESSAGE_PING:
+			case MESSAGE_ERROR:
 				line = (String) msg.obj;
-				appendLog("ping.txt",line);
+				appendLog("error.txt",line);
+				break;
+			case MESSAGE_EVENT:
+				line = (String) msg.obj;
+				appendLog("events.txt",line);
 				break;
 			}
 		}
@@ -104,15 +122,16 @@ public class LoggerThread extends Thread{
 
 	// Externalize variables for performance
 	private File Root = Environment.getExternalStorageDirectory();
+	private File logFolder = new File(Root+"/logs");
 	private File logFile;
 	private BufferedWriter buf;
 	private FileWriter fw;
 	
 	public void appendLog(String fileName, String text){
 		//Log.v(TAG, text);
-		if(Root.canWrite()){
+		if(logFolder.canWrite()){
 			//String filePath = mainCtx.getFilesDir().getPath().toString() + "/logXabi.txt";
-			logFile = new File(Root,fileName);
+			logFile = new File(logFolder,fileName);
 			if (!logFile.exists()){
 				try{
 					logFile.createNewFile();
@@ -141,7 +160,7 @@ public class LoggerThread extends Thread{
 	 * Stops the thread in a safe way
 	 */
 	protected void finalize() {
-		sendLogByEmail();
+		//sendLogByEmail();
 		exit_condition = true;
 	}
 

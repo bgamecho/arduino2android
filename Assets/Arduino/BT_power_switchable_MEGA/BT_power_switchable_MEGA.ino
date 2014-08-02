@@ -1,8 +1,6 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
-#include <SoftwareSerial.h>
 #include <avr/pgmspace.h>
-
 
 //A0 (Analog 0) pin is an Light Diode Resistor (LDR)
 int ldr =0;
@@ -20,6 +18,8 @@ int MSGID_PING = 0x26;
 int MSGID_STRESS= 0x27;
 int DLC = 55;
 int ETX = 0x03;
+
+int frameNum = 0;
 
 void setup()
 {
@@ -43,22 +43,36 @@ void loop()
 {
 
   // Echo all incoming Bluetooth data (for PING tests)
-  if(Serial1.available()){
+  while(Serial1.available())
+  {
     incomingByte = Serial1.read();
+    Serial1.write(incomingByte);
     
-    char aux[1] = {incomingByte};
-    sendMessage(MSGID_PING, aux, 2);
+    Serial.print(incomingByte);
+    Serial.print(' ');
+    if(incomingByte==ETX)
+      Serial.println("");
+
   }
   
   // Info from BT is displayed in Comm1
-  if (Serial.available()){
+  if (Serial.available())
+  {
     char command = Serial.read();
     switch(command){
       case 's':
+        // start sending data
         started = true;
+        break;
+      case 'm':
+        // Mute (stop sending data)
+        started = false;
+      case 'p':
+        // Power ON Bluetooth
         digitalWrite(btPower, HIGH);
       break;
       case 'f':
+        // Power OFF Bluetooth (and stop sending data)
         started = false;
         digitalWrite(btPower, LOW);
       break;
@@ -71,9 +85,11 @@ void loop()
 
   }
   
-  if(check_clock()){ 
+  if(check_clock())
+  { 
     
-    if(started){
+    if(started)
+    {
       ldr = analogRead(0);
       
       String payload = "T:";
@@ -81,11 +97,9 @@ void loop()
       payload+= "-LDR:";
       payload+=ldr;
       payload+="#";
-      payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut aliquet, ";
+      payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ac imperdiet lorem, eget aliquet elit. Pellentesque feugiat ullamcorper eros, id cursus mauris tempor nec. Phasellus sem mi, ultrices vel lectus vel, facilisis cursus nisi. Maecenas consequat tortor ut ornare faucibus. Nullam dignissim lobortis sagittis. Aliquam vel commodo justo. Nam facilisis nunc faucibus lacus cursus porta. Nulla sed dignissim erat. Vestibulum pretium diam rhoncus turpis volutpat, sagittis egestas justo volutpat. ";
       //payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit.Lorem ipsum dolor sit amet, consectetur adipiscing elit.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed elit dolor, venenatis ac magna at, dapibus ultricies tellus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Fusce pharetra turpis non leo pulvinar, at elementum urna hendrerit. ";
-
-      //payload = "HELLO";
-      
+     
       int length = payload.length()+1; // Length (with one extra character for the null terminator)
       char aux[length];
       payload.toCharArray(aux, length);
@@ -96,16 +110,22 @@ void loop()
   delay(50);
 }
 
-void sendMessage(int MSGID, char payload[], int length){
+void sendMessage(int MSGID, char payload[], int length)
+{
   
   long crc = crc_string(payload);
   unsigned char buf[sizeof(long int)];
   memcpy(buf,&crc,sizeof(long int));
 
+  if(frameNum<99)
+    frameNum+=1;
+  else
+    frameNum = 1;
   
   Serial1.write(STX);
   Serial1.write(MSGID);
-  Serial1.write(length);
+  Serial1.write(frameNum);
+  Serial1.write(--length);
   Serial1.write(payload);
   Serial1.write(buf,sizeof(buf));
   Serial1.write(ETX);
@@ -117,7 +137,8 @@ void sendMessage(int MSGID, char payload[], int length){
 }
 
 // This method updates a counter of seconds and shows information through the Serial interface
-boolean check_clock(){
+boolean check_clock()
+{
   if(flag_seconds){
     flag_seconds = false;
     return true;
@@ -128,7 +149,7 @@ boolean check_clock(){
 //Timer2 Overflow Interrupt Vector, called every 1ms
 ISR(TIMER2_OVF_vect) {
   ticks++;               //Increments the interrupt counter
-  if(ticks > 99){
+  if(ticks > 999){
     ticks = 0;           //Resets the interrupt counter
     flag_seconds = true;
     seconds++;

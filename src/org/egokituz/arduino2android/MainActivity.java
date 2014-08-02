@@ -33,6 +33,7 @@ import org.egokituz.utils.BadMessageFrameFormat;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -56,13 +57,18 @@ public class MainActivity extends Activity {
 
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	private static final int REQUEST_ENABLE_BT = 1;
-	public static final int MESSAGE_READ = 2;
+	public static final int MESSAGE_DATA_READ = 2;
 	protected static final int MESSAGE_BATTERY_STATE_CHANGED = 4;
 	public static final int MESSAGE_CPU_USAGE = 5;
-	public static final int MESSAGE_PING = 6;
+	public static final int MESSAGE_PING_READ = 6;
+	public static final int MESSAGE_ERROR_READING = 7;
+
+	protected static final int MESSAGE_BT_EVENT = 8;
 
 	Spinner spinnerBluetooth;
 	ListView devicesListView;
+	
+	Context context;
 
 	private BTManagerThread _BTManager;
 	private BatteryMonitorThread _BatteryMonitor;
@@ -74,10 +80,11 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		context = this;
 		setContentView(R.layout.activity_main);
 
 		finishApp = false;
-		
+
 		if(!handlerThread.isAlive())
 			handlerThread.start();
 		createHandler();
@@ -89,15 +96,15 @@ public class MainActivity extends Activity {
 			e.printStackTrace();
 
 			int duration = Toast.LENGTH_SHORT;
-			Toast toast = Toast.makeText(this, "Bluetooth not supported", duration);
+			Toast toast = Toast.makeText(this, "Could not start the BT manager", duration);
 			toast.show();
 			this.finish();
 		}
-	
+
 		_BatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
 		_cpuMonitor = new CPUMonitorThread(this, arduinoHandler);
 		_Logger = new LoggerThread(this, arduinoHandler);
-		
+
 	}
 
 	@Override 
@@ -113,17 +120,7 @@ public class MainActivity extends Activity {
 			_cpuMonitor.start();
 		if(!_Logger.isAlive())
 			_Logger.start();
-		
-		if(!_BTManager.isAlive()){
-			_BTManager.start();
 
-			// Set the Bluetooth Manager's plan  
-			Message sendMsg;
-			sendMsg = _BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,BTManagerThread.DELAYED_CONNECT); // TODO change the obj of the message
-			sendMsg.arg1 = BTManagerThread.INITIAL_DISCOVERY;
-			sendMsg.arg2 = BTManagerThread.PROGRESSIVE_CONNECT;
-			sendMsg.sendToTarget();
-		}
 	}
 
 	@Override
@@ -223,20 +220,21 @@ public class MainActivity extends Activity {
 		connectionTiming.setChecked(true);
 	}
 
-	public void setPlanButton(View view){
 
+	public void setPlanParameters(View view){
+		int discoveryMode = 0, connectionMode = 0, connectionTiming = 0;
 
 		RadioGroup discoveryGroup = (RadioGroup) findViewById(R.id.discoveryGroup);
 		int discoveryRadioButtonID = discoveryGroup.getCheckedRadioButtonId();
 		switch (discoveryRadioButtonID) {
 		case R.id.radio_discovery_initial:
-
+			discoveryMode = BTManagerThread.INITIAL_DISCOVERY;
 			break;
 		case R.id.radio_discovery_continuous:
-
+			discoveryMode = BTManagerThread.CONTINUOUS_DISCOVERY;
 			break;
 		case R.id.radio_discovery_periodic:
-
+			discoveryMode = BTManagerThread.PERIODIC_DISCOVERY;
 			break;
 		}
 
@@ -244,10 +242,10 @@ public class MainActivity extends Activity {
 		int connModeRadioButtonID = connectionModeGroup.getCheckedRadioButtonId();
 		switch (connModeRadioButtonID) {
 		case R.id.radio_progressive:
-
+			connectionMode = BTManagerThread.PROGRESSIVE_CONNECT;
 			break;
 		case R.id.radio_alltogether:
-
+			connectionMode = BTManagerThread.ALLTOGETHER_CONNECT;
 			break;
 		}
 
@@ -255,19 +253,43 @@ public class MainActivity extends Activity {
 		int connTimingRadioButtonID = connectionTimingGroup.getCheckedRadioButtonId();
 		switch (connTimingRadioButtonID) {
 		case R.id.radio_immediate_stop:
-
+			connectionTiming = BTManagerThread.IMMEDIATE_STOP_DISCOVERY_CONNECT;
 			break;
 		case R.id.radio_immediate_while:
-
+			connectionTiming = BTManagerThread.IMMEDIATE_WHILE_DISCOVERING_CONNECT;
 			break;
 		case R.id.radio_delayed:
-
+			connectionTiming = BTManagerThread.DELAYED_CONNECT;
 			break;
 		}
+
+		if(_BTManager.isAlive()){
+			Log.v(TAG, "Restarting BTManager thread with new parameters...");
+			_BTManager.finalize();
+			try {
+				_BTManager = new BTManagerThread(this, arduinoHandler);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+
+				int duration = Toast.LENGTH_SHORT;
+				Toast toast = Toast.makeText(this, "Could not start the BT manager", duration);
+				toast.show();
+				this.finish();
+			}
+		}
+		// Set the Bluetooth Manager's plan with the selected parameters
+		Message sendMsg;
+		sendMsg = _BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,connectionTiming); // TODO change the obj of the message
+		sendMsg.arg1 = discoveryMode;
+		sendMsg.arg2 = connectionMode;
+		sendMsg.sendToTarget();
+		
+		_BTManager.start();			
 	}
 
-	/**
-	 * Updates the ListView containing the connected Arduinos
+/**
+ * Updates the ListView containing the connected Arduinos
 
 	private void populateDeviceListView() {
 		devicesListView = (ListView) findViewById(R.id.listViewDevices);
@@ -281,144 +303,132 @@ public class MainActivity extends Activity {
 		}
 	}*/
 
-	//Updates the items of the Bluetooth devices' spinner
-	public void updateSpinner(View view){
-		// TODO update spinned with running threads
-		try {
-			ArrayList<String> threads = new ArrayList<String>();
-			Collections.addAll(threads, _BTManager.getConnectedArduinos());
-			ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-					android.R.layout.simple_spinner_item, threads);
+//Updates the items of the Bluetooth devices' spinner
+public void updateSpinner(View view){
+	// TODO update spinned with running threads
+	try {
+		ArrayList<String> threads = new ArrayList<String>();
+		Collections.addAll(threads, _BTManager.getConnectedArduinos());
+		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+				android.R.layout.simple_spinner_item, threads);
 
-			Spinner devSpin = (Spinner)findViewById(R.id.spinnerBluetooth);
-			devSpin.setAdapter(adapter);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		Spinner devSpin = (Spinner)findViewById(R.id.spinnerBluetooth);
+		devSpin.setAdapter(adapter);
+	} catch (Exception e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
 	}
+}
 
-	/**
-	 * Inquires the Bluetooth-Manager for the currently connected Arduino devices. 
-	 * @return String[] array with the connected device IDs (name-MAC)
-	 */
-	public String[] getConnectedDevices(){
-		String[] result = null;
+/**
+ * Inquires the Bluetooth-Manager for the currently connected Arduino devices. 
+ * @return String[] array with the connected device IDs (name-MAC)
+ */
+public String[] getConnectedDevices(){
+	String[] result = null;
 
-		if(_BTManager != null && _BTManager.isAlive())
-			result = _BTManager.getConnectedArduinos();
-		return result;
+	if(_BTManager != null && _BTManager.isAlive())
+		result = _BTManager.getConnectedArduinos();
+	return result;
 
-	}
+}
 
-	/**
-	 * Handler connected with the BTManager Threads: 
-	 */
-	private HandlerThread handlerThread = new HandlerThread("MyHandlerThread");
-	public Handler arduinoHandler;
-	private void createHandler(){
-		arduinoHandler = new Handler(handlerThread.getLooper()) {
-			String sendMsg;
-			byte[] readBuf;
-			int elapsedMilis;
-			int bytes;
-			String devName, devMAC;
-			long timestamp;
-			long msgCount, errCount;
-			ArduinoMessage msgReading;
+/**
+ * Handler connected with the BTManager Threads: 
+ */
+private HandlerThread handlerThread = new HandlerThread("MyHandlerThread");
+public Handler arduinoHandler;
+private void createHandler(){
+	arduinoHandler = new Handler(handlerThread.getLooper()) {
+		String sendMsg;
+		byte[] readBuf;
+		int elapsedMilis;
+		int bytes;
+		String devName, devMAC;
+		long timestamp;
+		long msgCount, errCount;
+		ArduinoMessage msgReading;
 
-			@SuppressLint("NewApi")
-			@Override
-			public void handleMessage(Message msg) {
+		@SuppressLint("NewApi")
+		@Override
+		public void handleMessage(Message msg) {
 
-				switch (msg.what) {
-				case MESSAGE_READ:
-					// Message received from a running Arduino Thread
-					// This message implies that a well formed message was read by an Arduino Thread
+			switch (msg.what) {
+			case MESSAGE_PING_READ:
+				// Message received from a running Arduino Thread
+				// This message implies that 99 well formed PING messages were read by an Arduino Thread
 
-					readBuf = (byte[]) msg.obj;
-					elapsedMilis = msg.arg1;
-					bytes = msg.arg2;
-					devName =  msg.getData().getString("NAME");
-					devMAC =  msg.getData().getString("MAC");
-					timestamp = msg.getData().getLong("TIMESTAMP");
+				ArrayList<String> pingQueue = (ArrayList<String>) msg.obj;
+				// write to log file
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_PING, pingQueue).sendToTarget();
 
+				break;
+				
+			case MESSAGE_DATA_READ:
+				// Message received from a running Arduino Thread
+				// This message implies that 99 well formed DATA messages were read by an Arduino Thread
 
-					try {
-						msgReading = new ArduinoMessage(readBuf);
-					} catch (BadMessageFrameFormat e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-					//String payload = msgReading.getPayload();
+				ArrayList<String> dataQueue = new ArrayList<>();
+				
+				
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_TO_LOG_FILE, dataQueue).sendToTarget();
 
-					// write to log file
-					sendMsg = timestamp+" "+devName+" "+elapsedMilis+"ms "+bytes+" bytes";
-					_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_TO_LOG_FILE, sendMsg).sendToTarget();
+				break;
 
-					break;
-				case MESSAGE_PING:
-					// Message received from a running Arduino Thread
-					// This message implies that a well formed PING message was read by an Arduino Thread
+			case MESSAGE_BATTERY_STATE_CHANGED:
+				// Message received from the Battery-Monitor Thread
+				// This message implies that the Battery percentage has changed
 
-					readBuf = (byte[]) msg.obj;
-					elapsedMilis = msg.arg1;
-					bytes = msg.arg2;
-					devName =  msg.getData().getString("NAME");
-					devMAC =  msg.getData().getString("MAC");
-					timestamp = msg.getData().getLong("TIMESTAMP");
-					msgCount = msg.getData().getLong("MSG_COUNT");
-					errCount = msg.getData().getLong("ERROR_COUNT");
+				Float batteryLoad = (Float) msg.obj;
+				timestamp = msg.getData().getLong("TIMESTAMP");
 
-					// If it's a ping message, the field PINGSENTTIME is relevant
-					long pingSentTime = msg.getData().getLong("PINGSENTTIME");
-					long pingTime = timestamp-pingSentTime;
+				// call the Logger to write the battery load
+				sendMsg = timestamp+" "+batteryLoad;
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, sendMsg).sendToTarget();
 
-					try {
-						msgReading = new ArduinoMessage(readBuf);
-					} catch (BadMessageFrameFormat e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					int frNum = msgReading.getFrameNum();
-					Log.v(TAG,"Ping nº "+frNum+" time: "+pingTime);
+				break;
 
-					// write to log file
-					sendMsg = timestamp+" "+devName+" "+pingTime;
-					_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_PING, sendMsg).sendToTarget();
+			case MESSAGE_CPU_USAGE:
+				// Message received from a running Arduino Thread
+				// This message implies that a malformed message has been read by an Arduino Thread
 
-					//tvLdr.setText(readMessage);
-					break;
+				Float cpu = (Float) msg.obj;
+				timestamp = msg.getData().getLong("TIMESTAMP");
 
-				case MESSAGE_BATTERY_STATE_CHANGED:
-					// Message received from the Battery-Monitor Thread
-					// This message implies that the Battery percentage has changed
+				// call the Logger to write the battery load
+				sendMsg = timestamp+" "+cpu;
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_CPU, sendMsg).sendToTarget();
 
-					Float batteryLoad = (Float) msg.obj;
-					timestamp = msg.getData().getLong("TIMESTAMP");
+				break;
+				
+			case MESSAGE_ERROR_READING:
+				// Message received from the CPU-Monitor Thread
+				// This message implies that the CPU usage has changed
 
-					// call the Logger to write the battery load
-					sendMsg = timestamp+" "+batteryLoad;
-					_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, sendMsg).sendToTarget();
+				String error = (String) msg.obj;
+				
+				// write to log file
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_ERROR, error).sendToTarget();
 
-					break;
+				break;
+				
+			case MESSAGE_BT_EVENT:
+				// Message received from the CPU-Monitor Thread
+				// This message implies that the CPU usage has changed
 
-				case MESSAGE_CPU_USAGE:
-					// Message received from the CPU-Monitor Thread
-					// This message implies that the CPU usage has changed
+				String event = (String) msg.obj;
+				
+				// write to log file
+				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_EVENT, event).sendToTarget();
 
-					Float cpu = (Float) msg.obj;
-					timestamp = msg.getData().getLong("TIMESTAMP");
-
-					// call the Logger to write the battery load
-					sendMsg = timestamp+" "+cpu;
-					_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_CPU, sendMsg).sendToTarget();
-
-					break;
-				}
+				int duration = Toast.LENGTH_SHORT;
+				Toast toast = Toast.makeText(context, event, duration);
+				toast.show();
+				break;
 			}
-		};
-	}
+		}
+	};
+}
 
 
 

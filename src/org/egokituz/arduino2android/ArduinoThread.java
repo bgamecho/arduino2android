@@ -26,8 +26,11 @@ import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -62,7 +65,7 @@ public class ArduinoThread extends Thread{
 	protected Handler btMngrHandler;
 
 	private BluetoothDevice myBluetoothDevice = null;
-	private String devName, devMac;
+	private String devName, devMAC;
 
 	private BluetoothSocket _socket = null;
 	private InputStream _inStream = null;
@@ -85,12 +88,12 @@ public class ArduinoThread extends Thread{
 		this.btMngrHandler = btMngrHandler;
 
 		myBluetoothDevice = device;
-		devMac = myBluetoothDevice.getAddress();
+		devMAC = myBluetoothDevice.getAddress();
 		devName = myBluetoothDevice.getName();
 
 
 		openConnection();
-		
+
 	}
 
 	public BluetoothDevice getBluetoothDevice() {
@@ -100,10 +103,10 @@ public class ArduinoThread extends Thread{
 		return devName;
 	}
 	public String getDeviceMAC(){
-		return devMac;
+		return devMAC;
 	}
 	public String getDeviceId(){
-		return devName+"-"+devMac;
+		return devName+"-"+devMAC;
 	}
 	public boolean isConnected() {
 		return connected;
@@ -119,14 +122,14 @@ public class ArduinoThread extends Thread{
 	 * if device is not bonded, an intent will automatically be called and user should enter PIN code
 	 */
 	public void openConnection() throws Exception{
-			Method m = myBluetoothDevice.getClass().getMethod("createRfcommSocket", new Class[] { int.class });
-			_socket = (BluetoothSocket) m.invoke(myBluetoothDevice, 1);
-			_socket.connect();
-			_inStream = _socket.getInputStream();
-			_outStream = _socket.getOutputStream();
+		Method m = myBluetoothDevice.getClass().getMethod("createRfcommSocket", new Class[] { int.class });
+		_socket = (BluetoothSocket) m.invoke(myBluetoothDevice, 1);
+		_socket.connect();
+		_inStream = _socket.getInputStream();
+		_outStream = _socket.getOutputStream();
 
-			if(_socket.isConnected())
-				connected = true;
+		if(_socket.isConnected())
+			connected = true;
 	}
 
 	/**
@@ -218,13 +221,14 @@ public class ArduinoThread extends Thread{
 	private int bufferIndex = 0;
 	private int payloadBytesRemaining; // DLC parameter counter (received payload length)
 	private int MSG_TYPE;
-	private long prevRealtime = 0, elapsedRealTime, elapsedTime;
+	private long prevRealtime = SystemClock.elapsedRealtime(), elapsedRealTime, elapsedTime;
 	private long timestamp;
 
-	//private int pingSeqNum=1, dataSeqNum=0;
+	private int expectedPingSeqNum=1, expectedDataSeqNum=1;
 
 	private long errorCount = 0L, msgCount = 0L;
 	private double errorRate;
+	private long ping;
 
 
 	/**
@@ -245,7 +249,7 @@ public class ArduinoThread extends Thread{
 					// Keep looking for STX (implies that a frame may have been lost)
 					Log.v(TAG, "Waiting for STX. Read: "+b);
 				}
-				
+
 				// Perform time calculations as soon as the STX is read
 				timestamp = System.currentTimeMillis();
 				elapsedRealTime =  SystemClock.elapsedRealtime();
@@ -253,7 +257,7 @@ public class ArduinoThread extends Thread{
 				prevRealtime = elapsedRealTime;
 
 				msgCount++;
-				
+
 				buffer[bufferIndex++] = (byte) b; // append STX at the beginning of the buffer  
 
 				// The next byte must be the message ID
@@ -270,37 +274,42 @@ public class ArduinoThread extends Thread{
 				b = _inStream.read();
 				buffer[bufferIndex++] = (byte) b; // append Frame Seq. number
 
-				/* TODO Move this block elsewhere
-				 
+				int seqNum = b;
 				// Check if the frame sequence number is the expected (if not, a message may have been lost)
 				switch (MSG_TYPE) {
-				case MSGID_PING:
-					if(b != pingSeqNum){
+				case ArduinoMessage.MSGID_PING:
+					try {
+						ping = timestamp-pingSentTimes.get(seqNum);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					if(seqNum != expectedPingSeqNum){
 						Log.e(TAG, "Unexpected Ping Frame seq. number");
-						Log.e(TAG, "Received:"+b+" Expected: "+pingSeqNum);
-						pingSeqNum = b+1;
-					}else if(pingSeqNum<99)
-						pingSeqNum++;
+						Log.e(TAG, "Received:"+seqNum+" Expected: "+expectedPingSeqNum);
+						expectedPingSeqNum = seqNum+1;
+					}else if(seqNum<99)
+						expectedPingSeqNum = seqNum+1;
 					else
-						pingSeqNum = 1;
+						expectedPingSeqNum = 1;
 					break;
-				case MSGID_DATA:
-					if(b != dataSeqNum){
+				case ArduinoMessage.MSGID_DATA:
+					if(seqNum != expectedDataSeqNum){
 						Log.e(TAG, "Unexpected Data Frame seq. number");
-						Log.e(TAG, "Received:"+b+" Expected: "+dataSeqNum);
-						dataSeqNum = b+1;
-					}else if(dataSeqNum<99)
-						dataSeqNum++;
+						Log.e(TAG, "Received:"+b+" Expected: "+expectedDataSeqNum);
+						expectedDataSeqNum = seqNum;
+					}else if(seqNum<99)
+						expectedDataSeqNum = seqNum+1;
 					else
-						dataSeqNum = 1;
+						expectedDataSeqNum = 1;
 					break;
-				}*/
+				}
 
 				// The next byte must be the expected data length code
 				b = _inStream.read();
 				buffer[bufferIndex++] = (byte) b; //append DLC
 
-				payloadBytesRemaining = b; // Arduino UNO's problem?? WTF
+				payloadBytesRemaining = b; 
 				//payloadBytesRemaining = b;
 
 				while ( (payloadBytesRemaining--) > 0 ) {
@@ -321,36 +330,28 @@ public class ArduinoThread extends Thread{
 
 				byte[] auxBuff = new byte[bufferIndex];
 				System.arraycopy(buffer, 0, auxBuff, 0, bufferIndex);
-				
-				ArduinoMessage readMessage = new ArduinoMessage(devName, auxBuff);
 
-				
-				// Notify the main activity that a message was read 
-				Message sendMsg = new Message();
-				Bundle myDataBundle = new Bundle();
-				myDataBundle.putString("NAME", this.getDeviceName());
-				myDataBundle.putString("MAC", this.getDeviceMAC());
-				myDataBundle.putLong("TIMESTAMP", timestamp);
-				myDataBundle.putLong("MSG_COUNT", msgCount);
-				myDataBundle.putLong("ERROR_COUNT", errorCount);
-				if(MSG_TYPE == ArduinoMessage.MSGID_PING){
-					myDataBundle.putLong("PINGSENTTIME", pingSentTime);
-					sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_PING, (int) elapsedTime, bufferIndex, auxBuff);
-				}else
-					sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_READ, (int) elapsedTime, bufferIndex, auxBuff);
-				sendMsg.setData(myDataBundle);
-				sendMsg.sendToTarget();
+				ArduinoMessage readMessage = new ArduinoMessage(devName, auxBuff);
+				readMessage.devName = this.devName;
+				readMessage.devMAC = this.devMAC;
+				readMessage.timestamp = timestamp;
+
+				processMessage(readMessage, ping);
 
 			} catch (BadMessageFrameFormat e){
 				errorCount++;
 				errorRate=(errorCount/(double) msgCount)*100.0;
-				Log.e(TAG, "Error rate: % "+ errorRate);
+				Log.e(TAG, devName+" error rate: % "+ errorRate);
+				
+				// Notify the main activity that a frame was dropped
+				String errorLine = timestamp+" "+devName;
+				mainHandler.obtainMessage(MainActivity.MESSAGE_ERROR_READING, errorLine).sendToTarget();
 			} catch (IOException e) {
 				Log.e(TAG, "IOException reading socket for "+myBluetoothDevice.getName());
 				//e.printStackTrace();
 
 				// Notify the Bluetooth Manager Thread that the connection was lost, and let it decide the recovery process
-				Message sendMsg = btMngrHandler.obtainMessage(BTManagerThread.MESSAGE_CONNECTION_LOST, (int) elapsedTime, bufferIndex, this);
+				Message sendMsg = btMngrHandler.obtainMessage(BTManagerThread.MESSAGE_CONNECTION_LOST, this);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putString("NAME", this.getDeviceName());
 				myDataBundle.putString("MAC", this.getDeviceMAC());
@@ -372,8 +373,44 @@ public class ArduinoThread extends Thread{
 		}
 	}
 
-	long pingSentTime; 
-	int pingFrameSeqNum = 1;
+	private ArrayList<String> dataQueue = new ArrayList<>();
+	private ArrayList<String> pingQueue = new ArrayList<>();
+	
+	/**
+	 * Takes both DATA and PING type messages, and stores each of them in an array-list. 
+	 * Once there is enough messages per type, it sends them to the main activity's handler. 
+	 * @param readMessage
+	 * @param ping: only read/needed if readMessage is of type MSGID_PING
+	 */
+	private void processMessage(ArduinoMessage readMessage, long ping) {
+		int msgType = readMessage.getMessageID();
+		String msg = readMessage.timestamp + " "+this.devName+" "+readMessage.size();
+		
+		switch (msgType) {
+		case ArduinoMessage.MSGID_PING:
+			msg +=" "+ping;
+			pingQueue.add(msg);
+			if(pingQueue.size()>99){
+				mainHandler.obtainMessage(MainActivity.MESSAGE_PING_READ, pingQueue.clone()).sendToTarget();
+				pingQueue.clear();
+			}
+			break;
+		case ArduinoMessage.MSGID_DATA:
+			dataQueue.add(msg);
+			if(dataQueue.size()>99){
+				mainHandler.obtainMessage(MainActivity.MESSAGE_DATA_READ, dataQueue).sendToTarget();
+				pingQueue.clear();
+			}
+			break;
+		}
+		
+		Log.v(TAG,msg);
+	}
+	
+
+	//private long pingSentTime; 
+	private int pingFrameSeqNum = 1;
+	private Map<Integer,Long> pingSentTimes = new HashMap<>();
 
 	/**
 	 * Sends a command to the connected Arduino via Bluetooth socket
@@ -383,7 +420,7 @@ public class ArduinoThread extends Thread{
 
 		//Check if its a PING command
 		if(cmd.contentEquals("p")){
-			pingSentTime = System.currentTimeMillis();
+			pingSentTimes.put(pingFrameSeqNum, System.currentTimeMillis());
 			ArduinoMessage myMsg = new ArduinoMessage();
 			List<Byte> outBuffer = myMsg.pingMessage(pingFrameSeqNum);
 
@@ -392,8 +429,8 @@ public class ArduinoThread extends Thread{
 				auxBuff[i] = outBuffer.get(i);
 			try {
 				String aux = Arrays.toString(auxBuff);
-				Log.v(TAG, "Sending ping nº "+pingFrameSeqNum+"--"+aux);
-				//Log.v(TAG, "Sending ping nº "+pingFrameSeqNum);
+				//Log.v(TAG, "Sending ping nº "+pingFrameSeqNum+"--"+aux);
+
 				_outStream.write(auxBuff, 0, outBuffer.size());
 			} catch (IOException e) {
 				Log.e(TAG, "Exception writting to the Arduino socket");
