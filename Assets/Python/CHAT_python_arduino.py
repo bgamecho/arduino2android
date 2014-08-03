@@ -75,14 +75,17 @@ def open_port(lock):
         print 'Enter port number'
         raw_input('>')
         try:
-            mSerial = serial.Serial(7, 57600)
+            mSerial = serial.Serial('COM18', 57600)
+            sleep(2)
             if mSerial and mSerial.isOpen:
                 print 'Port successfully opened'
+                mSerial.write('p')
                 i = 0
                 while i < 10:
                     rcv = mSerial.readline().strip()
-                    sys.stdout.write('\r%s' % rcv)
-                    sys.stdout.flush()
+                    #Wsys.stdout.write('\r%s' % rcv)
+                    #sys.stdout.flush()
+                    print rcv
                     i+=1
     #            sendMsg = sys.stdin.readline().strip()
     #            if sendMsg != 'end':
@@ -102,49 +105,12 @@ def show_ports(lock):
         print '\n>>Showing available ports'
         for p in  enumerate_serial_ports():
             print p
-
-def scan_log(lock):
+            
+def send_command(lock):
     with lock:
-        logFile = gui_fname("C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/")
-        print 'You selected the file: '+logFile
-        #data = numpy.loadtxt(logFile, 'float')
-        sleep(2)
-        data = numpy.genfromtxt(logFile,dtype='str')
-        print data
-        #noisy sequence:
-        sSeq = data[0:1000,1]
-        #nSeq = [map(int, x) for x in sSeq]
-        nSeq = sSeq.astype(numpy.float)
-        print nSeq
-        maxLen = len(nSeq)
-        print maxLen
-        
-        plt.figure()
-        plt.plot(nSeq)
-        plt.show()
-#        #Plotting
-#        fix, ax = plt.subplots()
-#        x = numpy.linspace(0, maxLen)
-#        y = numpy.linspace(0, 3)
-#        ax.plot(x, y, 'k--')
-#        ax.plot(x, nSeq, 'ro')
-#        
-#        ax.set_xlim(54)
-#        ax.set_xticks(nSeq)
-#        ax.set_xticklabels(['0', '10', '20', '30', '40'])
-#        ax.set_ylim(0, 3)
-#        ax.set_yticks([0.5, 1, 1.5, 2, 2.5])
-#        
-#        # Only draw spine between the y-ticks
-#        ax.spines['left'].set_bounds(0, 3)
-#        # Hide the right and top spines
-#        ax.spines['right'].set_visible(True)
-#        ax.spines['top'].set_visible(True)
-#        # Only show ticks on the left and bottom spines
-#        ax.yaxis.set_ticks_position('left')
-#        ax.xaxis.set_ticks_position('bottom')
-#        
-#        plt.show()
+        print '\n>>Enter command'
+        cmd = raw_input('>')
+
 
 def gui_fname(dir=None):
   """Select a file via a dialog and return the file name.
@@ -160,7 +126,7 @@ def invalid_input(lock):
         print('--> Unknown command')
 
 def main():
-    cmd_actions = {'1': open_port, '2': show_ports, '3': scan_log}
+    cmd_actions = {'1': open_port, '2': show_ports, '3': send_command}
     cmd_queue = Queue.Queue()
     stdout_lock = threading.Lock()
 

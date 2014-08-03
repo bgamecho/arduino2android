@@ -241,7 +241,7 @@ public class ArduinoThread extends Thread{
 		if(connected){
 
 			try {
-				buffer = new byte[255];
+				buffer = new byte[1024];
 				bufferIndex = 0;
 
 				// Read bytes from the stream until we encounter the the start of message character
@@ -305,11 +305,26 @@ public class ArduinoThread extends Thread{
 					break;
 				}
 
-				// The next byte must be the expected data length code
-				b = _inStream.read();
-				buffer[bufferIndex++] = (byte) b; //append DLC
-
-				payloadBytesRemaining = b; 
+				//The next four bytes must be the expected data length code (DLC)
+				for(int i=0; i<4; i++)
+					buffer[bufferIndex++] = (byte) (b = _inStream.read());
+				
+				byte[] dlcBytes = new byte[8];
+				System.arraycopy(buffer, 3, dlcBytes, 0, 4);
+				
+				ByteBuffer dlcBuff = ByteBuffer.wrap(dlcBytes);
+				dlcBuff.order(ByteOrder.BIG_ENDIAN);
+				//payloadBytesRemaining = (int) (auxBuffer.getInt() & 0xFFFFFFFFL);
+				payloadBytesRemaining = (int) dlcBuff.getInt();
+			    Log.v(TAG, "expected "+payloadBytesRemaining+ " bytes to read");
+				
+			    /*
+				auxBuffer.order(ByteOrder.BIG_ENDIAN);
+				//payloadBytesRemaining = (int) (auxBuffer.getInt() & 0xFFFFFFFFL);
+				payloadBytesRemaining = (int) auxBuffer.getLong();
+			    Log.v(TAG, "expected "+payloadBytesRemaining+ " bytes to read");
+				*/
+			    
 				//payloadBytesRemaining = b;
 
 				while ( (payloadBytesRemaining--) > 0 ) {
@@ -372,6 +387,7 @@ public class ArduinoThread extends Thread{
 			}
 		}
 	}
+
 
 	private ArrayList<String> dataQueue = new ArrayList<>();
 	private ArrayList<String> pingQueue = new ArrayList<>();

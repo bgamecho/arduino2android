@@ -27,6 +27,17 @@ def main():
     pingTimestamps = pingData[:,0].astype(numpy.long)
     ping = pingData[:,3].astype(numpy.long)
     
+    pingById = dict()
+    for line in pingData:
+        robId = line[1]
+        if robId in pingById:
+            aux = pingById[robId]
+            aux = numpy.vstack((aux,line))
+            pingById[robId]=aux
+        else:
+            pingById[robId]=line
+    pingById
+    
     batteryFile = rootDir+"battery.txt"
     batteryData = numpy.genfromtxt(batteryFile,dtype='str')
     batteryTimestamps = batteryData[:,0].astype(numpy.long)
@@ -49,7 +60,6 @@ def main():
     
     stressFile = rootDir+"data.txt"
     stressData = numpy.genfromtxt(stressFile, dtype='str')
-
     #t0 = min([pingTimestamps[0], batteryTimestamps[0], cpuTimestamps[0], eventTimestamps[0], errorTimestamps[0]]).astype(numpy.long)
     t0 = min([pingTimestamps[0]]).astype(numpy.long)
     tn = max([pingTimestamps[-1], batteryTimestamps[-1], cpuTimestamps[-1], eventTimestamps[-1], errorTimestamps[-1]]).astype(numpy.long)
@@ -92,14 +102,19 @@ def main():
     
     plt.subplot(311)
     plt.title("Ping signals")
-    plt.plot(pingTimestamps, ping, color="green", linestyle="-", label="ping")
+
+    for key in pingById.keys():
+        pingTimestamps = pingById[key][:,0].astype(numpy.long)
+        ping = pingById[key][:,3].astype(numpy.long)
+        plt.plot(pingTimestamps, ping, linestyle="-", label=key)
+
+    plt.grid(True)
     plt.xlim(t0-5000, tn+5000)
     plt.ylim(0, 200)
     plt.ylabel('Ping time')
     plt.xlabel('time (miliseconds)')
     plt.legend(loc='upper left')
     
-    #Vertical line 1406908300916 ROBOTICA_9 12 42
     for line in eventData:
         eventTimestamp = line[0]
         event = line[1]
@@ -109,18 +124,22 @@ def main():
              xy=(eventTimestamp,42), xycoords='data', rotation=90,
              xytext=(-10, +10), textcoords='offset points', fontsize=10)
 
+
     plt.subplot(312)    
     plt.title("Battery and CPU")
     plt.plot(batteryTimestamps, battery, color="blue", linestyle="-", label="battery")
     plt.plot(cpuTimestamps,cpu, color="black", linestyle="-", label="CPU")
     
+    plt.grid(True)
     plt.xlim(t0-5000, tn+5000)
     plt.ylim(cpu.min()*0.9, cpu.max()*1.1)
     plt.ylabel('CPU')
     plt.xlabel('time (miliseconds)')
     plt.legend(loc='lower left')
     
+    
     plt.subplot(313)
+    plt.grid(True)
     plt.plot(xthroughput, throughput_smooth, color="blue", linestyle="-", label="throughput")
     plt.xlim(t0-5000, tn+5000)
     plt.ylabel('Throughput')

@@ -18,7 +18,7 @@ int MSGID_PING = 0x26;
 int MSGID_STRESS= 0x27;
 int DLC = 55;
 int ETX = 0x03;
-
+String payload = "";
 int frameNum = 0;
 
 void setup()
@@ -60,22 +60,39 @@ void loop()
   {
     char command = Serial.read();
     switch(command){
-      case 's':
-        // start sending data
-        started = true;
-        break;
-      case 'm':
-        // Mute (stop sending data)
-        started = false;
       case 'p':
         // Power ON Bluetooth
         digitalWrite(btPower, HIGH);
       break;
+      
       case 'f':
         // Power OFF Bluetooth (and stop sending data)
         started = false;
         digitalWrite(btPower, LOW);
       break;
+      
+      case 's':
+        // start sending data
+        started = true;
+        // Power ON Bluetooth
+        digitalWrite(btPower, HIGH);
+        break;
+        
+      case 'm':
+        // Mute (stop sending data)
+        started = false;
+      break;
+      
+      case 'i':
+        // increment Payload size in one byte
+        payload+="@";
+        break;
+        
+      case 'r':
+        // reset payload to 0 bytes
+        payload = "";
+        started= false;
+        break;
     }
     
     Serial.print("Rcv: ");
@@ -87,24 +104,23 @@ void loop()
   
   if(check_clock())
   { 
-    
     if(started)
     {
       ldr = analogRead(0);
-      
+      /*
       String payload = "T:";
       payload+= seconds;
       payload+= "-LDR:";
       payload+=ldr;
       payload+="#";
-      //payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ac imperdiet lorem, eget aliquet elit. Pellentesque feugiat ullamcorper eros, id cursus mauris tempor nec. Phasellus sem mi, ultrices vel lectus vel, facilisis cursus nisi. Maecenas consequat tortor ut ornare faucibus. Nullam dignissim lobortis sagittis. Aliquam vel commodo justo. Nam facilisis nunc faucibus lacus cursus porta. Nulla sed dignissim erat. Vestibulum pretium diam rhoncus turpis volutpat, sagittis egestas justo volutpat. ";
-      payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
-     
-      int length = payload.length()+1; // Length (with one extra character for the null terminator)
-      char aux[length];
-      payload.toCharArray(aux, length);
+      payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ac imperdiet lorem, eget aliquet elit. Pellentesque feugiat ullamcorper eros, id cursus mauris tempor nec. Phasellus sem mi, ultrices vel lectus vel, facilisis cursus nisi. Maecenas consequat tortor ut ornare faucibus. Nullam dignissim lobortis sagittis. Aliquam vel commodo justo. Nam facilisis nunc faucibus lacus cursus porta. Nulla sed dignissim erat. Vestibulum pretium diam rhoncus turpis volutpat, sagittis egestas justo volutpat. ";
+      payload="@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@";
+      //payload = "@";*/
+      int length = payload.length(); 
+      char payloadBytes[length+1]; // Length (with one extra character for the null terminator)
+      payload.toCharArray(payloadBytes, length+1);
       
-      sendMessage(MSGID_STRESS, aux, length);
+      sendMessage(MSGID_STRESS, payloadBytes, length);
     }
   }
   delay(50);
@@ -112,11 +128,16 @@ void loop()
 
 void sendMessage(int MSGID, char payload[], int length)
 {
+  unsigned char buf[4];
+  buf[0] = (length >> 24) & 0xFF;
+  buf[1] = (length >> 16) & 0xFF;
+  buf[2] = (length >> 8) & 0xFF;
+  buf[3] = (length) & 0xFF;
   
   long crc = crc_string(payload);
-  unsigned char buf[sizeof(long int)];
-  memcpy(buf,&crc,sizeof(long int));
-
+  unsigned char crcBytes[sizeof(long int)];
+  memcpy(crcBytes,&crc,sizeof(long int));
+    
   if(frameNum<99)
     frameNum+=1;
   else
@@ -125,15 +146,17 @@ void sendMessage(int MSGID, char payload[], int length)
   Serial1.write(STX);
   Serial1.write(MSGID);
   Serial1.write(frameNum);
-  Serial1.write(--length);
+  Serial1.write(buf, sizeof(buf));
   Serial1.write(payload);
-  Serial1.write(buf,sizeof(buf));
+  Serial1.write(crcBytes,sizeof(crcBytes));
   Serial1.write(ETX);
   
   Serial.print(length);
   Serial.print(": ");
   Serial.print(payload);
   Serial.println("");
+
+
 }
 
 // This method updates a counter of seconds and shows information through the Serial interface

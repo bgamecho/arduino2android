@@ -31,7 +31,8 @@ public class ArduinoMessage{
 	private byte stx;
 	private byte msgId;
 	private byte frameSeqNum;
-	private byte dlc;
+	private byte dlcBytes[] = new byte[4];
+	private int dlc;
 	private String payload;
 	private byte crc_bytes[] = new byte[8];
 	private byte etx;
@@ -53,7 +54,15 @@ public class ArduinoMessage{
 			if(msgId != MSGID_DATA && msgId != MSGID_PING)
 				throw new UnknownMessageID("Received "+msgId+". Expected MSGID_DATA or _PING");
 			frameSeqNum			= buffer[bufferIndex++];
-			dlc 				= buffer[bufferIndex++];
+			dlcBytes[0]			= buffer[bufferIndex++];
+			dlcBytes[1]			= buffer[bufferIndex++];
+			dlcBytes[2]			= buffer[bufferIndex++];
+			dlcBytes[3]			= buffer[bufferIndex++];
+			
+			ByteBuffer dlcBuffer = ByteBuffer.wrap(dlcBytes);
+			dlcBuffer.order(ByteOrder.BIG_ENDIAN);
+			dlc = dlcBuffer.getInt();
+			
 			payload = new String(buffer, bufferIndex, dlc);
 			bufferIndex+=dlc;
 			crc_bytes [0]= buffer[bufferIndex++];
@@ -65,7 +74,6 @@ public class ArduinoMessage{
 				throw new IncorrectETXbyte();
 
 			ByteBuffer auxBuffer = ByteBuffer.wrap(crc_bytes);
-			auxBuffer = ByteBuffer.wrap(crc_bytes);
 			auxBuffer.order(ByteOrder.LITTLE_ENDIAN);
 			crc = auxBuffer.getLong();
 
@@ -92,16 +100,19 @@ public class ArduinoMessage{
 	}
 	
 	public List<Byte> pingMessage(int sequenceNumber){
-		int size = 0;
+		String msg = "p";
+		int size = msg.length();
 		//byte[] outBuffer = new byte[16];
 		List<Byte> outBuffer = new ArrayList<Byte>();
 		outBuffer.add((byte) STX);
 		outBuffer.add((byte) MSGID_PING);
 		outBuffer.add((byte) sequenceNumber);
-		outBuffer.add((byte) size);
-		for(byte b : "".getBytes())
+		//outBuffer.add((byte) size);
+		for( byte b : ByteBuffer.allocate(4).putInt(size).array())
 			outBuffer.add((byte) b);
-		long CRC = getChecksum("".getBytes());
+		for(byte b : msg.getBytes())
+			outBuffer.add((byte) b);
+		long CRC = getChecksum(msg.getBytes());
 		for( byte b : longToBytes(CRC))
 			outBuffer.add((byte) b);
 		outBuffer.add((byte) ETX);
@@ -157,4 +168,13 @@ public class ArduinoMessage{
 			result[i] = b[i];
 		return result;
 	}
+	
+	public long bytesToLong(byte[] bytes) {
+	    ByteBuffer buffer = ByteBuffer.allocate(4);
+	    buffer.put(bytes);
+	    buffer.flip();//need flip 
+	    return buffer.getLong();
+	}
+	
+	
 }
