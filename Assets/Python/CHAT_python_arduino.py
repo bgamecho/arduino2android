@@ -12,6 +12,7 @@ import Queue
 import PyQt4
 import numpy
 import matplotlib.pyplot as plt
+import thread
 #from __future__ import print_function
 from serial.serialutil import SerialException
 from time import sleep
@@ -59,9 +60,9 @@ def console(q, lock):
         #raw_input()   # Afther pressing Enter you'll be in "input mode"
         with lock:
             print '\n\n>>Options menu:\n\t'+\
-            '[1]Open a port \n\t'+\
+            '[1]Open ports \n\t'+\
             '[2]See available ports\n\t'+\
-            '[3]Scan a log file\n\t'+\
+            '[3]Test script\n\t'+\
             '\'quit\' to exit application '
             cmd = raw_input('> ')
 
@@ -69,47 +70,76 @@ def console(q, lock):
         if cmd == 'quit':
             break
         sleep(0.05)
-        
-def open_port(lock):
+
+portDict = {}        
+def open_ports(lock):
     with lock:
-        print 'Enter port number'
-        raw_input('>')
-        try:
-            mSerial = serial.Serial('COM18', 57600)
-            sleep(2)
-            if mSerial and mSerial.isOpen:
-                print 'Port successfully opened'
-                mSerial.write('p')
-                i = 0
-                while i < 10:
-                    rcv = mSerial.readline().strip()
-                    #Wsys.stdout.write('\r%s' % rcv)
-                    #sys.stdout.flush()
-                    print rcv
-                    i+=1
-    #            sendMsg = sys.stdin.readline().strip()
-    #            if sendMsg != 'end':
-    #                mSerial.write(sendMsg)
-    #                print mSerial.readline()
-                mSerial.close()
-            else:
-                print 'Could not open port'
-        except SerialException, e:
-            print 'Exception happenned while opening port'
-            print e
-            if mSerial:
-                mSerial.close()
+        print 'Opening all ports'
+
+        for p in  enumerate_serial_ports():
+            if p != 'COM1':
+                mSerial = serial.Serial()
+                try:
+                    mSerial = serial.Serial(p, 57600)
+                    sleep(2)
+                    if mSerial and mSerial.isOpen:
+                        print 'Port '+p+' successfully opened'
+                        portDict[p]=mSerial
+                    else:
+                        print 'Could not open port'
+                except SerialException, e:
+                    print 'Exception happenned while opening port'
+                    print e
+                    if mSerial and mSerial.isOpen:
+                        mSerial.close()
+
+        thread.start_new_thread( progressive_power_off, (portDict, 0) )
+        
+def test_script(lock):
+    # 1) Start all Arduinos progressively
+    thread.start_new_thread( progressive_power_on, (portDict, 15) )
+    
+#        for (pName,port) in portDict.items():
+#            port.write('s')
+#            thread.start_new_thread( increment_payload, (pName,port,0.0099,600))
+
+    sleep(180) # wait for 3mins
+    thread.start_new_thread( progressive_power_off, (portDict, 15) )
+    sleep(150) # wait for 3mins
+    close_ports(portDict)
+            
+def close_ports(ports):
+    for (pName,port) in ports.items():
+        print 'Closing port '+pName
+        port.close()
+
+def progressive_power_on(ports, delay):
+    for (pName,port) in ports.items():
+        print 'Powering-on '+pName
+        port.write('p')
+        sleep(delay)
+    print 'Done powering-on all Arduinos'
+
+def progressive_power_off(ports, delay):
+    for (pName,port) in ports.items():
+        print 'Powering-off '+pName
+        port.write('f')
+        sleep(delay)
+    print 'Done powering-off all Arduinos'
+
+def increment_payload(name,port,delay,n):
+    i=0
+    while i<n:
+        port.write('i')
+        sleep(delay)
+        i+=1
             
 def show_ports(lock):
     with lock:
         print '\n>>Showing available ports'
         for p in  enumerate_serial_ports():
             print p
-            
-def send_command(lock):
-    with lock:
-        print '\n>>Enter command'
-        cmd = raw_input('>')
+
 
 
 def gui_fname(dir=None):
@@ -126,7 +156,7 @@ def invalid_input(lock):
         print('--> Unknown command')
 
 def main():
-    cmd_actions = {'1': open_port, '2': show_ports, '3': send_command}
+    cmd_actions = {'1': open_ports, '2': show_ports, '3': test_script}
     cmd_queue = Queue.Queue()
     stdout_lock = threading.Lock()
 

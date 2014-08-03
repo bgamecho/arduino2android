@@ -107,15 +107,6 @@ void loop()
     if(started)
     {
       ldr = analogRead(0);
-      /*
-      String payload = "T:";
-      payload+= seconds;
-      payload+= "-LDR:";
-      payload+=ldr;
-      payload+="#";
-      payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ac imperdiet lorem, eget aliquet elit. Pellentesque feugiat ullamcorper eros, id cursus mauris tempor nec. Phasellus sem mi, ultrices vel lectus vel, facilisis cursus nisi. Maecenas consequat tortor ut ornare faucibus. Nullam dignissim lobortis sagittis. Aliquam vel commodo justo. Nam facilisis nunc faucibus lacus cursus porta. Nulla sed dignissim erat. Vestibulum pretium diam rhoncus turpis volutpat, sagittis egestas justo volutpat. ";
-      payload="@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@";
-      //payload = "@";*/
       int length = payload.length(); 
       char payloadBytes[length+1]; // Length (with one extra character for the null terminator)
       payload.toCharArray(payloadBytes, length+1);

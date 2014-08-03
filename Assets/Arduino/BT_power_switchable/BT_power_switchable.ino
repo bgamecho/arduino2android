@@ -1,16 +1,15 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
-#include <SoftwareSerial.h>
 #include <avr/pgmspace.h>
+
+//A0 (Analog 0) pin is an Light Diode Resistor (LDR)
+int ldr =0;
 
 #define rxPin 2
 #define txPin 3
 
 // Configura un nuevo puerto serie
-SoftwareSerial miSerial = SoftwareSerial(rxPin, txPin);
-
-//A0 (Analog 0) pin is an Light Diode Resistor (LDR)
-int ldr =0;
+SoftwareSerial btSerial = SoftwareSerial(rxPin, txPin);
 
 int incomingByte = 0;   // for incoming Bluetooth-serial data
 
@@ -25,7 +24,7 @@ int MSGID_PING = 0x26;
 int MSGID_STRESS= 0x27;
 int DLC = 55;
 int ETX = 0x03;
-
+String payload = "";
 int frameNum = 0;
 
 void setup()
@@ -39,7 +38,7 @@ void setup()
   TCCR2B = 0x05;        //Timer2 Control Reg B: Timer Prescaler set to 128
   
   Serial.begin(57600);
-  miSerial.begin(57600);
+  Serial1.begin(57600);
 
   // initialize the digital pin as an output.
   pinMode(btPower, OUTPUT);
@@ -50,10 +49,10 @@ void loop()
 {
 
   // Echo all incoming Bluetooth data (for PING tests)
-  while(miSerial.available())
+  while(Serial1.available())
   {
-    incomingByte = miSerial.read();
-    miSerial.write(incomingByte);
+    incomingByte = Serial1.read();
+    btSerial.write(incomingByte);
     
     Serial.print(incomingByte);
     Serial.print(' ');
@@ -67,22 +66,39 @@ void loop()
   {
     char command = Serial.read();
     switch(command){
-      case 's':
-        // start sending data
-        started = true;
-        break;
-      case 'm':
-        // Mute (stop sending data)
-        started = false;
       case 'p':
         // Power ON Bluetooth
         digitalWrite(btPower, HIGH);
       break;
+      
       case 'f':
         // Power OFF Bluetooth (and stop sending data)
         started = false;
         digitalWrite(btPower, LOW);
       break;
+      
+      case 's':
+        // start sending data
+        started = true;
+        // Power ON Bluetooth
+        digitalWrite(btPower, HIGH);
+        break;
+        
+      case 'm':
+        // Mute (stop sending data)
+        started = false;
+      break;
+      
+      case 'i':
+        // increment Payload size in one byte
+        payload+="@";
+        break;
+        
+      case 'r':
+        // reset payload to 0 bytes
+        payload = "";
+        started= false;
+        break;
     }
     
     Serial.print("Rcv: ");
@@ -94,24 +110,14 @@ void loop()
   
   if(check_clock())
   { 
-    
     if(started)
     {
       ldr = analogRead(0);
+      int length = payload.length(); 
+      char payloadBytes[length+1]; // Length (with one extra character for the null terminator)
+      payload.toCharArray(payloadBytes, length+1);
       
-      String payload = "T:";
-      payload+= seconds;
-      payload+= "-LDR:";
-      payload+=ldr;
-      payload+="#";
-      payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut aliquet, ";
-      //payload+="Lorem ipsum dolor sit amet, consectetur adipiscing elit.Lorem ipsum dolor sit amet, consectetur adipiscing elit.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed elit dolor, venenatis ac magna at, dapibus ultricies tellus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Fusce pharetra turpis non leo pulvinar, at elementum urna hendrerit. ";
-     
-      int length = payload.length()+1; // Length (with one extra character for the null terminator)
-      char aux[length];
-      payload.toCharArray(aux, length);
-      
-      sendMessage(MSGID_STRESS, aux, length);
+      sendMessage(MSGID_STRESS, payloadBytes, length);
     }
   }
   delay(50);
@@ -119,28 +125,35 @@ void loop()
 
 void sendMessage(int MSGID, char payload[], int length)
 {
+  unsigned char buf[4];
+  buf[0] = (length >> 24) & 0xFF;
+  buf[1] = (length >> 16) & 0xFF;
+  buf[2] = (length >> 8) & 0xFF;
+  buf[3] = (length) & 0xFF;
   
   long crc = crc_string(payload);
-  unsigned char buf[sizeof(long int)];
-  memcpy(buf,&crc,sizeof(long int));
-
+  unsigned char crcBytes[sizeof(long int)];
+  memcpy(crcBytes,&crc,sizeof(long int));
+    
   if(frameNum<99)
     frameNum+=1;
   else
     frameNum = 1;
   
-  miSerial.write(STX);
-  miSerial.write(MSGID);
-  miSerial.write(frameNum);
-  miSerial.write(--length);
-  miSerial.write(payload);
-  miSerial.write(buf,sizeof(buf));
-  miSerial.write(ETX);
+  btSerial.write(STX);
+  btSerial.write(MSGID);
+  btSerial.write(frameNum);
+  btSerial.write(buf, sizeof(buf));
+  btSerial.write(payload);
+  btSerial.write(crcBytes,sizeof(crcBytes));
+  btSerial.write(ETX);
   
   Serial.print(length);
   Serial.print(": ");
   Serial.print(payload);
   Serial.println("");
+
+
 }
 
 // This method updates a counter of seconds and shows information through the Serial interface
@@ -156,7 +169,7 @@ boolean check_clock()
 //Timer2 Overflow Interrupt Vector, called every 1ms
 ISR(TIMER2_OVF_vect) {
   ticks++;               //Increments the interrupt counter
-  if(ticks > 999){
+  if(ticks > 99){
     ticks = 0;           //Resets the interrupt counter
     flag_seconds = true;
     seconds++;
