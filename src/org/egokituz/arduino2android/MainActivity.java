@@ -74,6 +74,7 @@ public class MainActivity extends Activity {
 	private BatteryMonitorThread _BatteryMonitor;
 	private LoggerThread _Logger;
 	private CPUMonitorThread _cpuMonitor;
+	private ArrayList<String> testParameters = new ArrayList<>();
 
 	public boolean finishApp; 
 
@@ -188,7 +189,7 @@ public class MainActivity extends Activity {
 		finishApp = true;
 	}
 
-
+/*
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		// Check which request we're responding to
@@ -207,7 +208,7 @@ public class MainActivity extends Activity {
 			}
 		}
 	}
-
+*/
 
 	private void setButtons(){
 		RadioButton discoveryMode = (RadioButton) findViewById(R.id.radio_discovery_initial);
@@ -222,6 +223,7 @@ public class MainActivity extends Activity {
 
 
 	public void setPlanParameters(View view){
+		testParameters.clear();
 		int discoveryMode = 0, connectionMode = 0, connectionTiming = 0;
 
 		RadioGroup discoveryGroup = (RadioGroup) findViewById(R.id.discoveryGroup);
@@ -229,12 +231,15 @@ public class MainActivity extends Activity {
 		switch (discoveryRadioButtonID) {
 		case R.id.radio_discovery_initial:
 			discoveryMode = BTManagerThread.INITIAL_DISCOVERY;
+			testParameters.add("INITIAL_DISCOVERY");
 			break;
 		case R.id.radio_discovery_continuous:
 			discoveryMode = BTManagerThread.CONTINUOUS_DISCOVERY;
+			testParameters.add("CONTINUOUS_DISCOVERY");
 			break;
 		case R.id.radio_discovery_periodic:
 			discoveryMode = BTManagerThread.PERIODIC_DISCOVERY;
+			testParameters.add("PERIODIC_DISCOVERY");
 			break;
 		}
 
@@ -243,9 +248,11 @@ public class MainActivity extends Activity {
 		switch (connModeRadioButtonID) {
 		case R.id.radio_progressive:
 			connectionMode = BTManagerThread.PROGRESSIVE_CONNECT;
+			testParameters.add("PROGRESSIVE_CONNECT");
 			break;
 		case R.id.radio_alltogether:
 			connectionMode = BTManagerThread.ALLTOGETHER_CONNECT;
+			testParameters.add("ALLTOGETHER_CONNECT");
 			break;
 		}
 
@@ -254,15 +261,19 @@ public class MainActivity extends Activity {
 		switch (connTimingRadioButtonID) {
 		case R.id.radio_immediate_stop:
 			connectionTiming = BTManagerThread.IMMEDIATE_STOP_DISCOVERY_CONNECT;
+			testParameters.add("IMMEDIATE_STOP_DISCOVERY_CONNECT");
 			break;
 		case R.id.radio_immediate_while:
 			connectionTiming = BTManagerThread.IMMEDIATE_WHILE_DISCOVERING_CONNECT;
+			testParameters.add("IMMEDIATE_WHILE_DISCOVERING_CONNECT");
 			break;
 		case R.id.radio_delayed:
 			connectionTiming = BTManagerThread.DELAYED_CONNECT;
+			testParameters.add("DELAYED_CONNECT");
 			break;
 		}
 
+		//Kill current BTManager, and subsequently all the ArduinoThreads 
 		if(_BTManager.isAlive()){
 			Log.v(TAG, "Restarting BTManager thread with new parameters...");
 			_BTManager.finalize();
@@ -278,6 +289,9 @@ public class MainActivity extends Activity {
 				this.finish();
 			}
 		}
+		//Tell the logger that a new Test has begun, so that a new log folder is created with the new parameters
+		_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_NEW_LOG_FOLDER, testParameters).sendToTarget();
+		
 		// Set the Bluetooth Manager's plan with the selected parameters
 		Message sendMsg;
 		sendMsg = _BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,connectionTiming); // TODO change the obj of the message

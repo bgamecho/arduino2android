@@ -80,8 +80,6 @@ public class ArduinoThread extends Thread{
 	 * @throws Exception
 	 */
 	public ArduinoThread(Handler myHandler, Handler btMngrHandler, BluetoothDevice device) throws Exception {
-		this.setName("ArduinoThread"); // Set this thread's name
-
 		terminateFlag = false;
 		connected=false;
 		this.mainHandler = myHandler;
@@ -91,7 +89,7 @@ public class ArduinoThread extends Thread{
 		devMAC = myBluetoothDevice.getAddress();
 		devName = myBluetoothDevice.getName();
 
-
+		this.setName("ArduinoThread_"+devName); // Set this thread's name
 		openConnection();
 
 	}
@@ -241,13 +239,13 @@ public class ArduinoThread extends Thread{
 		if(connected){
 
 			try {
-				buffer = new byte[1024];
+				//buffer = new byte[1024];
 				bufferIndex = 0;
 
 				// Read bytes from the stream until we encounter the the start of message character
 				while (( b = _inStream.read()) != ArduinoMessage.STX ) {
 					// Keep looking for STX (implies that a frame may have been lost)
-					Log.v(TAG, "Waiting for STX. Read: "+b);
+					//Log.v(TAG, "Waiting for STX. Read: "+b);
 				}
 
 				// Perform time calculations as soon as the STX is read
@@ -285,8 +283,8 @@ public class ArduinoThread extends Thread{
 						e.printStackTrace();
 					}
 					if(seqNum != expectedPingSeqNum){
-						Log.e(TAG, "Unexpected Ping Frame seq. number");
-						Log.e(TAG, "Received:"+seqNum+" Expected: "+expectedPingSeqNum);
+						//Log.e(TAG, "Unexpected Ping Frame seq. number");
+						//Log.e(TAG, "Received:"+seqNum+" Expected: "+expectedPingSeqNum);
 						expectedPingSeqNum = seqNum+1;
 					}else if(seqNum<99)
 						expectedPingSeqNum = seqNum+1;
@@ -295,8 +293,8 @@ public class ArduinoThread extends Thread{
 					break;
 				case ArduinoMessage.MSGID_DATA:
 					if(seqNum != expectedDataSeqNum){
-						Log.e(TAG, "Unexpected Data Frame seq. number");
-						Log.e(TAG, "Received:"+b+" Expected: "+expectedDataSeqNum);
+						//Log.e(TAG, "Unexpected Data Frame seq. number");
+						//Log.e(TAG, "Received:"+b+" Expected: "+expectedDataSeqNum);
 						expectedDataSeqNum = seqNum+1;
 					}else if(seqNum<99)
 						expectedDataSeqNum = seqNum+1;
@@ -316,7 +314,7 @@ public class ArduinoThread extends Thread{
 				dlcBuff.order(ByteOrder.BIG_ENDIAN);
 				//payloadBytesRemaining = (int) (auxBuffer.getInt() & 0xFFFFFFFFL);
 				payloadBytesRemaining = (int) dlcBuff.getInt();
-			    Log.v(TAG, "expected "+payloadBytesRemaining+ " bytes to read");
+			    //Log.v(TAG, "expected "+payloadBytesRemaining+ " bytes to read");
 				
 			    /*
 				auxBuffer.order(ByteOrder.BIG_ENDIAN);
@@ -420,7 +418,7 @@ public class ArduinoThread extends Thread{
 			break;
 		}
 		
-		Log.v(TAG,msg);
+		//Log.v(TAG,msg);
 	}
 	
 

@@ -94,18 +94,38 @@ def open_ports(lock):
                         mSerial.close()
 
         thread.start_new_thread( progressive_power_off, (portDict, 0) )
-        
-def test_script(lock):
-    # 1) Start all Arduinos progressively
-    thread.start_new_thread( progressive_power_on, (portDict, 15) )
-    
-#        for (pName,port) in portDict.items():
-#            port.write('s')
-#            thread.start_new_thread( increment_payload, (pName,port,0.0099,600))
 
-    sleep(180) # wait for 3mins
-    thread.start_new_thread( progressive_power_off, (portDict, 15) )
-    sleep(150) # wait for 3mins
+
+#def test_script(lock):
+#    open_ports(lock)
+#    
+#    print 'Starting command script'
+#    thread.start_new_thread( selective, ('COM18', 'p') )
+#    
+#def selective(portName, command):
+#    for (pName,port) in portDict.items():
+#        if pName in portName:
+#            print 'Sending \''+command+'\' to '+portName
+#            port.write('p')
+
+def test_script(lock):
+    
+    while True:
+        # 1) Start all Arduinos progressively
+        thread.start_new_thread( progressive_power_on, (portDict, 30) )
+        
+        #        for (pName,port) in portDict.items():
+        #            port.write('s')
+        #            thread.start_new_thread( increment_payload, (pName,port,0.0099,600))
+        
+        #sleep(180) # wait for 3mins
+        sleep(600) # wait for 5mins
+        thread.start_new_thread( progressive_power_off, (portDict, 30) )
+        sleep(600) # wait for 5mins
+        thread.start_new_thread( progressive_power_on, (portDict, 30) )
+        sleep(600) # wait for 5mins
+        thread.start_new_thread( progressive_power_off, (portDict, 30) )
+        
     close_ports(portDict)
             
 def close_ports(ports):

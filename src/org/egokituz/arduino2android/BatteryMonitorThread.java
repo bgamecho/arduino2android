@@ -49,17 +49,20 @@ public class BatteryMonitorThread extends Thread{
 			
 			switch (action) {
 			case Intent.ACTION_BATTERY_CHANGED:
-				Float pct = getBatteryPercentage();
-				
+				int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+				int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+
+				float batteryPct = (100*level) / (float)scale;
+
 				long timestamp = System.currentTimeMillis();
 				
-				Message sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_BATTERY_STATE_CHANGED,pct);
+				Message sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_BATTERY_STATE_CHANGED,batteryPct);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putLong("TIMESTAMP", timestamp);
 				sendMsg.setData(myDataBundle);
 				sendMsg.sendToTarget();
 				
-				Log.v(TAG, "Battery Changed: "+pct);
+				Log.v(TAG, "Battery Changed: "+batteryPct);
 				break;
 			}
 		}
@@ -75,15 +78,6 @@ public class BatteryMonitorThread extends Thread{
 		
 		IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 		batteryStatus = mainCtx.registerReceiver(myReceiver, ifilter);
-	}
-	
-	public float getBatteryPercentage(){
-		int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-		int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-
-		float batteryPct = level / (float)scale;
-		
-		return batteryPct;
 	}
 
 	@Override

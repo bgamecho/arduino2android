@@ -1,6 +1,7 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+#include <SoftwareSerial.h>
 
 //A0 (Analog 0) pin is an Light Diode Resistor (LDR)
 int ldr =0;
@@ -38,7 +39,7 @@ void setup()
   TCCR2B = 0x05;        //Timer2 Control Reg B: Timer Prescaler set to 128
   
   Serial.begin(57600);
-  Serial1.begin(57600);
+  btSerial.begin(57600);
 
   // initialize the digital pin as an output.
   pinMode(btPower, OUTPUT);
@@ -49,9 +50,9 @@ void loop()
 {
 
   // Echo all incoming Bluetooth data (for PING tests)
-  while(Serial1.available())
+  while(btSerial.available())
   {
-    incomingByte = Serial1.read();
+    incomingByte = btSerial.read();
     btSerial.write(incomingByte);
     
     Serial.print(incomingByte);

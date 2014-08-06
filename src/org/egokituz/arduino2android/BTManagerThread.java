@@ -83,6 +83,10 @@ public class BTManagerThread extends Thread{
 	private int connectionMode = 0;
 	private int connectionTiming = 0;
 
+	// Booleans to control discovery start/end in case the receiver misses a state change
+	private boolean discoveryRequested;
+	protected boolean discovering;
+
 	private Handler mainHandler;
 	private Context mainCtx;
 
@@ -271,12 +275,14 @@ public class BTManagerThread extends Thread{
 		}
 	};
 
+
 	/** 
 	 * BroadcastReceiver that listens to:
 	 * Device discovery, connection and disconnection (ACTION_FOUND, ACTION_ACL_CONNECTED and ACTION_ACL_DISCONNECTED)
 	 * Discovery start and end: ACTION_DISCOVERY_STARTED and ACTION_DISCOVERY_FINISHED.
 	 */
 	private final BroadcastReceiver myReceiver = new BroadcastReceiver() {
+
 		public void onReceive(Context context, Intent intent) {
 			String action = intent.getAction();
 
@@ -290,34 +296,38 @@ public class BTManagerThread extends Thread{
 			switch (action){
 			case BluetoothDevice.ACTION_FOUND:
 				//TODO When discovery finds a device
+
 				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				devId= device.getName()+"-"+device.getAddress();
+
 				if(!newDevicesList.contains(device) && !ignoredDevicesList.containsKey(devId)){
+					Log.v(TAG, "New device found: "+devId);
+
 					synchronized (newDevicesList) {
 						newDevicesList.add(device);
 					}
-					Log.v(TAG, "New device found: "+devId);
-				}
-				switch (connectionTiming) {
-				case IMMEDIATE_STOP_DISCOVERY_CONNECT:
-					// Stop discovery and fetch new devices immediately
-					Log.v(TAG, "Canceling discovery and fetching... ");
-					_BluetoothAdapter.cancelDiscovery();
-					newArduinoAvalable = _plannerThread.fetchDevices();
-					if(newArduinoAvalable)
-						_plannerThread.connectAvalaiableArduinos();
-					break;
-				case IMMEDIATE_WHILE_DISCOVERING_CONNECT:
-					// While discovering, fetch new devices
-					Log.v(TAG, "Fetching while discovering... ");
-					newArduinoAvalable = _plannerThread.fetchDevices();
-					if(newArduinoAvalable)
-						_plannerThread.connectAvalaiableArduinos();
-					break;
-				case DELAYED_CONNECT:
-					// Do nothing (when discovery is finished the fetching will be done)
-					Log.v(TAG, "The devices will be fetched when discovery is finished.");
-					break;
+
+					switch (connectionTiming) {
+					case IMMEDIATE_STOP_DISCOVERY_CONNECT:
+						// Stop discovery and fetch new devices immediately
+						Log.v(TAG, "Canceling discovery and fetching... ");
+						_BluetoothAdapter.cancelDiscovery();
+						newArduinoAvalable = _plannerThread.fetchDevices();
+						if(newArduinoAvalable)
+							_plannerThread.connectAvalaiableArduinos();
+						break;
+					case IMMEDIATE_WHILE_DISCOVERING_CONNECT:
+						// While discovering, fetch new devices
+						Log.v(TAG, "Fetching while discovering... ");
+						newArduinoAvalable = _plannerThread.fetchDevices();
+						if(newArduinoAvalable)
+							_plannerThread.connectAvalaiableArduinos();
+						break;
+					case DELAYED_CONNECT:
+						// Do nothing (when discovery is finished the fetching will be done)
+						Log.v(TAG, "The devices will be fetched when discovery is finished.");
+						break;
+					}
 				}
 
 
@@ -366,6 +376,8 @@ public class BTManagerThread extends Thread{
 				timestamp = System.currentTimeMillis();
 				msg = timestamp+" "+"discovery-started";
 				mainHandler.obtainMessage(MainActivity.MESSAGE_BT_EVENT, msg).sendToTarget();
+				discoveryRequested = false;
+				discovering = true;
 				break;
 
 			case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
@@ -381,6 +393,8 @@ public class BTManagerThread extends Thread{
 						_plannerThread.connectAvalaiableArduinos();
 				}
 
+				discovering = false;
+
 				switch (discoveryPlan) {
 				case INITIAL_DISCOVERY:
 					// Do nothing, since the initial discovery has already been done
@@ -389,6 +403,7 @@ public class BTManagerThread extends Thread{
 				case CONTINUOUS_DISCOVERY:
 					// Start a new discovery immediately
 					_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
+					discoveryRequested = true;
 
 					break;
 				case PERIODIC_DISCOVERY:
@@ -398,6 +413,7 @@ public class BTManagerThread extends Thread{
 						@Override
 						public void run() {
 							_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
+							discoveryRequested = true;
 						}
 					}, discoveryInterval);
 					break;
@@ -518,14 +534,16 @@ public class BTManagerThread extends Thread{
 		_plannerThread.start();
 
 		// Get bonded devices (only the first time) 		
-		Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
-		newDevicesList.addAll(bondedDevices);
+		//Set<BluetoothDevice> bondedDevices = _BluetoothAdapter.getBondedDevices();
+		//newDevicesList.addAll(bondedDevices);
 
 		long pingInterval = 99;
 		while(!exit_condition){
 
 			// TODO consider using a POST-DELAYED run
 			pingAll();
+
+
 
 			/*
 			mainHandler.postDelayed( new Runnable() {
@@ -544,8 +562,11 @@ public class BTManagerThread extends Thread{
 	}
 
 	private void pingAll(){
-		for(ArduinoThread th : myArduinoThreads.values()){
-			sendCommandToArduino(th.getDeviceMAC(), "p");
+		
+		synchronized (myArduinoThreads) {
+			for (ArduinoThread th : myArduinoThreads.values()) {
+				sendCommandToArduino(th.getDeviceMAC(), "p");
+			}
 		}
 	}
 
@@ -597,6 +618,34 @@ public class BTManagerThread extends Thread{
 			// Loop to prevent the thread from finalizing and not answering to calls
 			while (!exit_condition){
 				try {
+
+					if(discovering && !_BluetoothAdapter.isDiscovering() || discoveryRequested && !_BluetoothAdapter.isDiscovering()){
+
+						// Control block, in case the BroadCast Receiver missed a state-changed call
+						switch (discoveryPlan) {
+						case INITIAL_DISCOVERY:
+							// Do nothing, since the initial discovery has already been done
+							break;
+						case CONTINUOUS_DISCOVERY:
+
+							// Start a new discovery immediately
+							_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
+
+							break;
+						case PERIODIC_DISCOVERY:
+							long discoveryInterval = 30000; //miliseconds
+
+							btHandler.postDelayed( new Runnable() {
+								@Override
+								public void run() {
+									_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
+								}
+							}, discoveryInterval);
+							break;
+						}
+
+					}
+
 					Thread.sleep(999);
 				} catch (InterruptedException e) { e.printStackTrace(); }
 			}
@@ -614,7 +663,7 @@ public class BTManagerThread extends Thread{
 		public boolean fetchDevices(){
 			boolean result = false;
 
-			// Select which devices are our Arduinos, and put them in the connectableArduinos list			
+			// Select which devices are our Arduinos, and put them in the connectableArduinos list
 			synchronized (newDevicesList) {
 				if (newDevicesList.size() > 0) {
 					BluetoothDevice device;
@@ -624,8 +673,8 @@ public class BTManagerThread extends Thread{
 						device = myIterator.next();
 						String deviceId = device.getName()+"-"+device.getAddress();
 
-						// Procede only if the device is one of our Arduinos
-						if (deviceId.contains("ROBOTICA_") || deviceId.contains("BT-SENSOR_")) {
+						// Proceed only if the device is one of our Arduinos
+						if (deviceId.contains("ROBOTICA_")) {
 
 							// Discard Arduinos that are already connected, ignored or due for connection 
 							if (!myArduinoThreads.containsKey(deviceId) 
@@ -642,6 +691,7 @@ public class BTManagerThread extends Thread{
 							ignoredDevicesList.put(deviceId, device);
 						}
 					}
+					newDevicesList.clear();
 				}
 			}// synchronized-end
 			return result;

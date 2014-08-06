@@ -49,10 +49,9 @@ public class LoggerThread extends Thread{
 	protected static final int MESSAGE_WRITE_BATTERY = 1;
 	protected static final int MESSAGE_CPU = 2;
 	protected static final int MESSAGE_PING = 3;
-
 	protected static final int MESSAGE_ERROR = 4;
-
 	protected static final int MESSAGE_EVENT = 5;
+	protected static final int MESSAGE_NEW_LOG_FOLDER = 6;
 
 	private Context mainCtx;
 	private Handler mainHandler;
@@ -74,7 +73,7 @@ public class LoggerThread extends Thread{
 				}
 				break;
 			case MESSAGE_WRITE_DATA:
-				ArrayList<String> dataQueue = (ArrayList<String>) msg.obj;
+				ArrayList<String> dataQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone();  //clone() or otherwise concurrent modification exception
 				for (String dataLine : dataQueue) {
 					appendLog("data.txt",dataLine);	
 				}
@@ -95,6 +94,13 @@ public class LoggerThread extends Thread{
 				line = (String) msg.obj;
 				appendLog("events.txt",line);
 				break;
+			case MESSAGE_NEW_LOG_FOLDER:
+				createNextLogFolder();
+				ArrayList<String> parametersQueue = (ArrayList<String>) msg.obj;
+				for (String paramLine : parametersQueue) {
+					appendLog("testParameters.txt",paramLine);
+				}
+				break;
 			}
 		}
 	};
@@ -102,8 +108,29 @@ public class LoggerThread extends Thread{
 
 	public LoggerThread(Context mainCtx, Handler mainHandler) {
 		super();
+		this.setName("loggerThread");
 		this.mainCtx = mainCtx;
 		this.mainHandler = mainHandler;
+		
+
+		
+		createNextLogFolder();
+	}
+
+	/**
+	 * Creates a new directory under Root/logs/logX, where X is the next smaller integer available
+	 */
+	private void createNextLogFolder() {
+		String folderName = "log1";
+		logFolder = new File(RootDir+ File.separator + folderName);
+		
+		int i = 1;
+		while(logFolder.isDirectory()){
+			i++;
+			folderName = "log"+i;
+			logFolder = new File(RootDir + File.separator + folderName);
+		}
+		logFolder.mkdir();
 	}
 
 	@Override
@@ -121,8 +148,8 @@ public class LoggerThread extends Thread{
 	}
 
 	// Externalize variables for performance
-	private File Root = Environment.getExternalStorageDirectory();
-	private File logFolder = new File(Root+"/logs");
+	private final File RootDir = new File(Environment.getExternalStorageDirectory() + File.separator + "logs");
+	private File logFolder;
 	private File logFile;
 	private BufferedWriter buf;
 	private FileWriter fw;
