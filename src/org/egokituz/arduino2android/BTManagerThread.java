@@ -183,10 +183,12 @@ public class BTManagerThread extends Thread{
 				devId = devName+"-"+devMAC;
 				myArduinoThreads.put(devId, arduinoTh);
 				Log.v(TAG, "Thread created for "+devName);
-
-				if(connectableArduinos.size()>0)
-					_plannerThread.connectAvalaiableArduinos();
-
+				
+				// Check the connection mode (in case it is delayed, now's the time to request the connection for the next connectable device) 
+				if(connectionMode == DELAYED_CONNECT){
+					if(connectableArduinos.size()>0)
+						_plannerThread.connectAvalaiableArduinos();
+				}
 				break;
 
 			case MESSAGE_ERROR_CREATING_BT_THREAD:
@@ -198,8 +200,11 @@ public class BTManagerThread extends Thread{
 				btDevice = (BluetoothDevice) msg.obj;
 				devMAC = btDevice.getAddress();
 
-				if(connectableArduinos.size()>0)
-					_plannerThread.connectAvalaiableArduinos();
+				// Check the connection mode (in case it is delayed, now's the time to request the connection for the next connectable device) 
+				if(connectionMode == DELAYED_CONNECT){
+					if(connectableArduinos.size()>0)
+						_plannerThread.connectAvalaiableArduinos();
+				}
 
 				break;
 
@@ -333,16 +338,17 @@ public class BTManagerThread extends Thread{
 
 				break;
 			case BluetoothDevice.ACTION_ACL_CONNECTED:
-				//TODO Low-level (ACL) connection has been established with a remote BT device
-				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				deviceName = device.getName();
-				Log.v(TAG, "connection established with "+deviceName);
-
-				// Notify the main activity about the connection:
+				//Low-level (ACL) connection has been established with a remote BT device
 				timestamp = System.currentTimeMillis();
+				
+				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+				deviceName = device.getName();				
+				
+				// Notify the main activity about the connection:
 				msg = timestamp+" "+deviceName+"-connected";
 				mainHandler.obtainMessage(MainActivity.MESSAGE_BT_EVENT, msg).sendToTarget();
-
+				
+				Log.v(TAG, "connection established with "+deviceName);
 				break;
 				/*
 			case BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED:
@@ -680,8 +686,9 @@ public class BTManagerThread extends Thread{
 							if (!myArduinoThreads.containsKey(deviceId) 
 									&& !ignoredDevicesList.containsKey(deviceId)
 									&& !connectableArduinos.containsKey(deviceId)) {
-								connectableArduinos.put(deviceId, device);
-
+								synchronized (connectableArduinos) {
+									connectableArduinos.put(deviceId, device);
+								}
 								Log.v(TAG, "New connectable arduino: "+deviceId);
 								result = true;
 							}
@@ -719,21 +726,28 @@ public class BTManagerThread extends Thread{
 					thDispatcher.execute(arduino);
 
 					String devId = arduino.getName()+"-"+arduino.getAddress();
-					connectableArduinos.remove(devId);
+					synchronized (connectableArduinos) {
+						connectableArduinos.remove(devId);
+					}
 				}
 
 				break;
 			case ALLTOGETHER_CONNECT:
 				// Request the connection with EACH and EVERY connectable Arduino device
 				if(connectableArduinos.size()>0){
-					for(BluetoothDevice arduino: connectableArduinos.values()){
-						//mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
+					synchronized (connectableArduinos) {
+						for (BluetoothDevice arduino : connectableArduinos
+								.values()) {
+							//mainHandler.obtainMessage(MainActivity.MESSAGE_CONNECT_ARDUINO,arduino).sendToTarget();
 
-						Log.v(TAG, "All-together connect || Requesting thread conn. for " + arduino.getName());
-						BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
-						thDispatcher.execute(arduino);
+							Log.v(TAG,
+									"All-together connect || Requesting thread conn. for "
+											+ arduino.getName());
+							BackgroundThreadDispatcher thDispatcher = new BackgroundThreadDispatcher();
+							thDispatcher.execute(arduino);
+						}
+						connectableArduinos.clear();
 					}
-					connectableArduinos.clear();
 				}else{
 					Log.v(TAG, "There isn't any new arduino");
 				}

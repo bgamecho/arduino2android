@@ -109,7 +109,7 @@ def open_ports(lock):
 #            port.write('p')
 
 def test_script(lock):
-    thread.start_new_thread( progressive_power_on, (portDict, 30) )
+    thread.start_new_thread( progressive_power_on, (portDict, 0) )
     
     
 #    while True:

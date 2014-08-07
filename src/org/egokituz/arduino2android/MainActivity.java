@@ -58,12 +58,11 @@ public class MainActivity extends Activity {
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	private static final int REQUEST_ENABLE_BT = 1;
 	public static final int MESSAGE_DATA_READ = 2;
-	protected static final int MESSAGE_BATTERY_STATE_CHANGED = 4;
+	public static final int MESSAGE_BATTERY_STATE_CHANGED = 4;
 	public static final int MESSAGE_CPU_USAGE = 5;
 	public static final int MESSAGE_PING_READ = 6;
 	public static final int MESSAGE_ERROR_READING = 7;
-
-	protected static final int MESSAGE_BT_EVENT = 8;
+	public static final int MESSAGE_BT_EVENT = 8;
 
 	Spinner spinnerBluetooth;
 	ListView devicesListView;
