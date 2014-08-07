@@ -109,24 +109,26 @@ def open_ports(lock):
 #            port.write('p')
 
 def test_script(lock):
+    thread.start_new_thread( progressive_power_on, (portDict, 30) )
     
-    while True:
-        # 1) Start all Arduinos progressively
-        thread.start_new_thread( progressive_power_on, (portDict, 30) )
-        
-        #        for (pName,port) in portDict.items():
-        #            port.write('s')
-        #            thread.start_new_thread( increment_payload, (pName,port,0.0099,600))
-        
-        #sleep(180) # wait for 3mins
-        sleep(600) # wait for 5mins
-        thread.start_new_thread( progressive_power_off, (portDict, 30) )
-        sleep(600) # wait for 5mins
-        thread.start_new_thread( progressive_power_on, (portDict, 30) )
-        sleep(600) # wait for 5mins
-        thread.start_new_thread( progressive_power_off, (portDict, 30) )
-        
-    close_ports(portDict)
+    
+#    while True:
+#        # 1) Start all Arduinos progressively
+#        thread.start_new_thread( progressive_power_on, (portDict, 30) )
+#        
+#        #        for (pName,port) in portDict.items():
+#        #            port.write('s')
+#        #            thread.start_new_thread( increment_payload, (pName,port,0.0099,600))
+#        
+#        #sleep(180) # wait for 3mins
+#        sleep(600) # wait for 5mins
+#        thread.start_new_thread( progressive_power_off, (portDict, 30) )
+#        sleep(600) # wait for 5mins
+#        thread.start_new_thread( progressive_power_on, (portDict, 30) )
+#        sleep(600) # wait for 5mins
+#        thread.start_new_thread( progressive_power_off, (portDict, 30) )
+#        
+#    close_ports(portDict)
             
 def close_ports(ports):
     for (pName,port) in ports.items():

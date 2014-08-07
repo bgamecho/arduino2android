@@ -105,7 +105,8 @@ public class MainActivity extends Activity {
 		_BatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
 		_cpuMonitor = new CPUMonitorThread(this, arduinoHandler);
 		_Logger = new LoggerThread(this, arduinoHandler);
-
+		
+		setButtons();
 	}
 
 	@Override 
@@ -113,14 +114,14 @@ public class MainActivity extends Activity {
 		super.onStart();
 		Log.v(TAG, "Arduino Activity --OnStart()--");
 
-		setButtons();
 
+		if(!_Logger.isAlive())
+			_Logger.start();
+		//Start the monitors
 		if(!_BatteryMonitor.isAlive())
 			_BatteryMonitor.start();
 		if(!_cpuMonitor.isAlive())
 			_cpuMonitor.start();
-		if(!_Logger.isAlive())
-			_Logger.start();
 
 	}
 
@@ -289,9 +290,12 @@ public class MainActivity extends Activity {
 				this.finish();
 			}
 		}
-		//Tell the logger that a new Test has begun, so that a new log folder is created with the new parameters
-		_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_NEW_LOG_FOLDER, testParameters).sendToTarget();
 		
+
+		
+		//Tell the logger that a new Test has begun  //NOT ANYMORE: a new log folder may be created with the new parameters
+		_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_NEW_TEST, testParameters).sendToTarget();
+
 		// Set the Bluetooth Manager's plan with the selected parameters
 		Message sendMsg;
 		sendMsg = _BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,connectionTiming); // TODO change the obj of the message

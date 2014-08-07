@@ -21,7 +21,7 @@ import matplotlib.dates as mdates
 
 
 def main():
-    rootDir = "C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/test_logs/test_log4/"
+    rootDir = "C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/test_logs/test_log6/"
     
     
     batteryFile = rootDir+"battery.txt"
@@ -34,14 +34,17 @@ def main():
     print cpuData[0]
     cpuTimestamps = cpuData[:,0].astype(numpy.long)
     cpu = cpuData[:,1].astype(numpy.float)
+    
+    t0 = min([cpuTimestamps[0], batteryTimestamps[0]]).astype(numpy.long)
+    tn = max([cpuTimestamps[-1], batteryTimestamps[-1]]).astype(numpy.long)
 
 
     plt.figure(1)
     plt.subplot(211)    
     plt.title("Battery")
-    plt.plot(batteryTimestamps, battery, color="blue", linestyle="-", label="Battery %")
+    plt.plot(batteryTimestamps, battery, color="blue", linestyle="-", marker="o", label="Battery %")
     
-    #plt.xlim(t0-5000, tn+5000)
+    plt.xlim(t0-5000, tn+5000)
     plt.ylabel('Battery %')
     plt.xlabel('time (miliseconds)')
     plt.legend(loc='upper left')
@@ -53,6 +56,7 @@ def main():
     plt.plot(cpuTimestamps,cpu, color="green", linestyle="-", label="CPU")
     plt.plot(smooth(cpuTimestamps),smooth(cpu), color="black", linestyle="-", label="smooth-CPU")
     
+    plt.xlim(t0-5000, tn+5000)
     plt.ylabel('CPU')
     plt.xlabel('time (miliseconds)')
     plt.legend(loc='lower left')

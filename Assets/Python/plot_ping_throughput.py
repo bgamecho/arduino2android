@@ -15,7 +15,7 @@ import numpy.ma as ma
 
 
 def main():
-    rootDir = "C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/test_logs/test_log3/"
+    rootDir = "C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/test_logs/test_log5/"
     
     pingFile = rootDir+"ping.txt"
     pingData = numpy.genfromtxt(pingFile,dtype='str')

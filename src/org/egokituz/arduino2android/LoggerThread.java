@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
@@ -51,55 +52,63 @@ public class LoggerThread extends Thread{
 	protected static final int MESSAGE_PING = 3;
 	protected static final int MESSAGE_ERROR = 4;
 	protected static final int MESSAGE_EVENT = 5;
-	protected static final int MESSAGE_NEW_LOG_FOLDER = 6;
+	protected static final int MESSAGE_NEW_TEST = 6;
 
 	private Context mainCtx;
 	private Handler mainHandler;
 
 	private boolean exit_condition = false;
 
+	private boolean testInProcess = false;
 
 	public Handler logHandler = new Handler(){
 
 		@SuppressWarnings("unchecked")
 		@Override
 		public void handleMessage(Message msg) {
-			String line;
+			ArrayList<String> textQueue;
+			String text;
 			switch (msg.what) {
 			case MESSAGE_PING:
-				ArrayList<String> pingQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone(); //clone() or otherwise concurrent modification exception
-				for (String pingLine : pingQueue) {
-					appendLog("ping.txt",pingLine);
-				}
+				textQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone(); //clone() or otherwise concurrent modification exception
+				appendLog("ping.txt",textQueue);
 				break;
 			case MESSAGE_WRITE_DATA:
-				ArrayList<String> dataQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone();  //clone() or otherwise concurrent modification exception
-				for (String dataLine : dataQueue) {
-					appendLog("data.txt",dataLine);	
-				}
+				textQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone();  //clone() or otherwise concurrent modification exception
+				appendLog("data.txt",textQueue);	
+
 				break;
 			case MESSAGE_WRITE_BATTERY:
-				line = (String) msg.obj;
-				appendLog("battery.txt",line);
+				text = (String) msg.obj;
+				textQueue = new ArrayList<String>();
+				textQueue.add(text);
+				appendLog("battery.txt",textQueue);
 				break;
 			case MESSAGE_CPU:
-				line = (String) msg.obj;
-				appendLog("cpu.txt",line);
+				text = (String) msg.obj;
+				textQueue = new ArrayList<String>();
+				textQueue.add(text);
+				appendLog("cpu.txt",textQueue);
 				break;
 			case MESSAGE_ERROR:
-				line = (String) msg.obj;
-				appendLog("error.txt",line);
+				text = (String) msg.obj;
+				textQueue = new ArrayList<String>();
+				textQueue.add(text);
+				appendLog("error.txt",textQueue);
 				break;
 			case MESSAGE_EVENT:
-				line = (String) msg.obj;
-				appendLog("events.txt",line);
+				text = (String) msg.obj;
+				textQueue = new ArrayList<String>();
+				textQueue.add(text);
+				appendLog("events.txt",textQueue);
 				break;
-			case MESSAGE_NEW_LOG_FOLDER:
-				createNextLogFolder();
+			case MESSAGE_NEW_TEST:
+				if(testInProcess)
+					createNextLogFolder();
 				ArrayList<String> parametersQueue = (ArrayList<String>) msg.obj;
-				for (String paramLine : parametersQueue) {
-					appendLog("testParameters.txt",paramLine);
-				}
+				parametersQueue.add(0, getDeviceName());
+				appendLog("testParameters.txt",parametersQueue);
+				testInProcess = true;
 				break;
 			}
 		}
@@ -111,10 +120,13 @@ public class LoggerThread extends Thread{
 		this.setName("loggerThread");
 		this.mainCtx = mainCtx;
 		this.mainHandler = mainHandler;
-		
 
-		
+		if(!RootDir.exists())
+			RootDir.mkdirs();
+
 		createNextLogFolder();
+
+
 	}
 
 	/**
@@ -123,7 +135,7 @@ public class LoggerThread extends Thread{
 	private void createNextLogFolder() {
 		String folderName = "log1";
 		logFolder = new File(RootDir+ File.separator + folderName);
-		
+
 		int i = 1;
 		while(logFolder.isDirectory()){
 			i++;
@@ -153,8 +165,8 @@ public class LoggerThread extends Thread{
 	private File logFile;
 	private BufferedWriter buf;
 	private FileWriter fw;
-	
-	public void appendLog(String fileName, String text){
+
+	public void appendLog(String fileName, ArrayList<String> text){
 		//Log.v(TAG, text);
 		if(logFolder.canWrite()){
 			//String filePath = mainCtx.getFilesDir().getPath().toString() + "/logXabi.txt";
@@ -171,9 +183,11 @@ public class LoggerThread extends Thread{
 			try{
 				//BufferedWriter for performance, true to set append to file flag
 				fw = new FileWriter(logFile, true);
-				buf = new BufferedWriter(fw); 
-				buf.append(text);
-				buf.newLine();
+				buf = new BufferedWriter(fw);
+				for (String line : text) {
+					buf.append(line);
+					buf.newLine();
+				}
 				buf.close();
 			}
 			catch (IOException e){
@@ -189,6 +203,16 @@ public class LoggerThread extends Thread{
 	protected void finalize() {
 		//sendLogByEmail();
 		exit_condition = true;
+	}
+
+	public String getDeviceName() {
+		String manufacturer = Build.MANUFACTURER;
+		String model = Build.MODEL;
+		if (model.startsWith(manufacturer)) {
+			return model;
+		} else {
+			return manufacturer + " " + model;
+		}
 	}
 
 	private void sendLogByEmail() {

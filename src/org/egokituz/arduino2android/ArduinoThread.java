@@ -387,8 +387,8 @@ public class ArduinoThread extends Thread{
 	}
 
 
-	private ArrayList<String> dataQueue = new ArrayList<>();
-	private ArrayList<String> pingQueue = new ArrayList<>();
+	private ArrayList<String> dataQueue = new ArrayList<String>();
+	private ArrayList<String> pingQueue = new ArrayList<String>();
 	
 	/**
 	 * Takes both DATA and PING type messages, and stores each of them in an array-list. 
@@ -424,7 +424,7 @@ public class ArduinoThread extends Thread{
 
 	//private long pingSentTime; 
 	private int pingFrameSeqNum = 1;
-	private Map<Integer,Long> pingSentTimes = new HashMap<>();
+	private Map<Integer,Long> pingSentTimes = new HashMap<Integer, Long>();
 
 	/**
 	 * Sends a command to the connected Arduino via Bluetooth socket
