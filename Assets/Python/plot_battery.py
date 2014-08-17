@@ -21,7 +21,7 @@ import matplotlib.dates as mdates
 
 
 def main():
-    rootDir = "C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/test_logs/test_log6/"
+    rootDir = "C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/test_logs/test_log7/"
     
     
     batteryFile = rootDir+"battery.txt"

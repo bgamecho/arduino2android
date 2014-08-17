@@ -15,7 +15,7 @@ import numpy.ma as ma
 
 
 def main():
-    rootDir = "C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/test_logs/test_log5/"
+    rootDir = "C:/Documents and Settings/Sensores/Mis documentos/Dropbox/PFG/git/arduino2android/Assets/Python/test_logs/test_log7/"
     
     pingFile = rootDir+"ping.txt"
     pingData = numpy.genfromtxt(pingFile,dtype='str')
@@ -31,7 +31,7 @@ def main():
             pingById[robId]=aux
         else:
             pingById[robId]=line
-    pingById
+    #pingById
     
     
     eventFile = rootDir+"events.txt"
