@@ -49,6 +49,51 @@ public class CPUMonitorThread extends Thread{
 
 	}
 	
+	private long idle1;
+	private long cpu1;
+	
+	private void readFirstUsage() {
+	    try {
+	        RandomAccessFile reader = new RandomAccessFile("/proc/stat", "r");
+	        String load = reader.readLine();
+	        reader.close();
+	        
+	        String[] toks = load.split(" ");
+
+	        idle1 = Long.parseLong(toks[4]);
+	        cpu1 = Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[5])
+	              + Long.parseLong(toks[6]) + Long.parseLong(toks[7]) + Long.parseLong(toks[8]);
+	    }catch (IOException ex) {
+	        ex.printStackTrace();
+	    }
+	}
+	
+	private float readUsage() {
+	    try {
+	        RandomAccessFile reader = new RandomAccessFile("/proc/stat", "r");
+	        String load = reader.readLine();
+	        load = reader.readLine();
+	        reader.close();
+
+	        String[] toks = load.split(" ");
+
+	        long idle2 = Long.parseLong(toks[4]);
+	        long cpu2 = Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[5])
+	            + Long.parseLong(toks[6]) + Long.parseLong(toks[7]) + Long.parseLong(toks[8]);
+
+	        float result = (float)(cpu2 - cpu1) / ((cpu2 + idle2) - (cpu1 + idle1));
+
+	        idle1 = idle2;
+	        cpu1 = cpu2;
+	        return result;
+
+	    } catch (IOException ex) {
+	        ex.printStackTrace();
+	    }
+
+	    return 0;
+	}
+	/*//Original function
 	private float readUsage() {
 	    try {
 	        RandomAccessFile reader = new RandomAccessFile("/proc/stat", "r");
@@ -81,25 +126,28 @@ public class CPUMonitorThread extends Thread{
 	    }
 
 	    return 0;
-	} 
+	}*/
 
 	@Override
 	public void run() {
 		super.run();
-		
+		readFirstUsage();
 		while(!exit_condition){
 			
 			Float pct = readUsage();
 			
-			long timestamp = System.currentTimeMillis();
 			
-			Message sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_CPU_USAGE,pct);
-			Bundle myDataBundle = new Bundle();
-			myDataBundle.putLong("TIMESTAMP", timestamp);
-			sendMsg.setData(myDataBundle);
-			sendMsg.sendToTarget();
+			if (pct>=0.0 && pct <=1.0) {
+				long timestamp = System.currentTimeMillis();
+				Message sendMsg = mainHandler.obtainMessage(
+						MainActivity.MESSAGE_CPU_USAGE, pct);
+				Bundle myDataBundle = new Bundle();
+				myDataBundle.putLong("TIMESTAMP", timestamp);
+				sendMsg.setData(myDataBundle);
+				sendMsg.sendToTarget();
+			}
 			
-			//Log.v(TAG, "CPU load changed: "+pct);
+			Log.v(TAG, "CPU load changed: "+pct);
 			
 			try {
 				Thread.sleep(999);

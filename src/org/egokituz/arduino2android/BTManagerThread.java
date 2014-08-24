@@ -84,7 +84,8 @@ public class BTManagerThread extends Thread{
 	private int connectionTiming = 0;
 
 	private final long discoveryInterval = 30000; // Interval between delayed discoveries (in milliseconds)
-
+	private long lastDiscoveryTimestamp;
+	
 	private Handler mainHandler;
 	private Context mainCtx;
 
@@ -442,8 +443,7 @@ public class BTManagerThread extends Thread{
 
 	}; // new() myReceiver 
 
-
-
+	
 	private void startDiscoveryIfPossible() {
 
 		switch (discoveryPlan) {
@@ -456,9 +456,11 @@ public class BTManagerThread extends Thread{
 			if(connectionTiming != IMMEDIATE_WHILE_DISCOVERING_CONNECT){
 				if(!(waitingToBeConnected.size() > 0)){
 					_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
+					lastDiscoveryTimestamp = System.currentTimeMillis();
 				}
 			}else{
 				_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
+				lastDiscoveryTimestamp = System.currentTimeMillis();
 			}
 			break;
 		case PERIODIC_DISCOVERY:
@@ -466,9 +468,10 @@ public class BTManagerThread extends Thread{
 				@Override
 				public void run() {
 					_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
+					lastDiscoveryTimestamp = System.currentTimeMillis();
 				}
 			};
-			btHandler.removeCallbacks(postRunnable);
+			//btHandler.removeCallbacks(postRunnable);
 			btHandler.postDelayed(postRunnable, discoveryInterval);
 
 			break;
@@ -632,13 +635,18 @@ public class BTManagerThread extends Thread{
 
 			// Initial discovery (there's always at least one initial discovery)
 			_BluetoothAdapter.startDiscovery(); // newDevicesList is updated when ACTION_FOUND
+			lastDiscoveryTimestamp = System.currentTimeMillis();
 
+			long now = lastDiscoveryTimestamp;
+			
 			// Loop to prevent the thread from finalizing and not answering to calls
 			while (!exit_condition){
 				try {
 
 					// Discovery control block, in case the Broadcast-Receiver missed a state-change
-					startDiscoveryIfPossible();
+					now = System.currentTimeMillis();
+					if(now-lastDiscoveryTimestamp>discoveryInterval*2)
+						startDiscoveryIfPossible();
 
 					Thread.sleep(999);
 				} catch (InterruptedException e) { e.printStackTrace(); }

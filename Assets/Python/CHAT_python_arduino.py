@@ -111,13 +111,16 @@ def open_ports(lock):
 def test_script(lock):
     thread.start_new_thread( progressive_power_on, (portDict, 0) )
     
-    sleep(1800)
+    sleep(5)
+   
+    for (pName,port) in portDict.items():
+        port.write('p')
     
-    while True:
-        for (pName,port) in portDict.items():
-            port.write('s')
-            thread.start_new_thread( increment_payload, (pName,port,0.0099,100))
-        sleep(900)
+#    while True:
+#        for (pName,port) in portDict.items():
+#            port.write('s')
+#            thread.start_new_thread( increment_payload, (pName,port,0.0099,100))
+#        sleep(900)
     
 #    while True:
 #        # 1) Start all Arduinos progressively

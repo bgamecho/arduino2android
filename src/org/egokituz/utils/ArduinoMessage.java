@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
+import org.egokituz.arduino2android.ArduinoThread;
+
 import android.util.Log;
 
 
@@ -43,6 +45,11 @@ public class ArduinoMessage{
 		
 	}
 
+	/**
+	 * Constructs an ArduinoMessage instance from the buffer provided
+	 * @param buffer
+	 * @throws BadMessageFrameFormat
+	 */
 	public ArduinoMessage(byte[] buffer) throws BadMessageFrameFormat {
 		int bufferIndex = 0;
 
@@ -94,11 +101,22 @@ public class ArduinoMessage{
 		}
 	}
 
+	/**
+	 * Constructs an ArduinoMessage instance with the buffer provided
+	 * @param devName identifier of the target device it is intended to be sent.
+	 * @param auxBuff
+	 * @throws BadMessageFrameFormat
+	 */
 	public ArduinoMessage(String devName, byte[] auxBuff) throws BadMessageFrameFormat {
 		this(auxBuff);
 		this.devName = devName;
 	}
 	
+	/**
+	 * Constructs an instance of ArduinoMessage, of type {@link ArduinoMessage.MSGID_PING}, and with the sequence number provided
+	 * @param sequenceNumber
+	 * @return
+	 */
 	public List<Byte> pingMessage(int sequenceNumber){
 		String msg = "p";
 		int size = msg.length();
@@ -121,19 +139,33 @@ public class ArduinoMessage{
 		return outBuffer;
 	}
 
+	/**
+	 * @return Returns the number of bytes of this instance of ArduinoMessage
+	 */
 	public int size(){
 		int result = 1+1+1+4+dlc+4+1; //STX + ID + Seq.Num + 4*DLC + payload size + 4*CRC + ETX
 		return result;
 	}
 
+	/**
+	 * @return The payload of this instance of {@link ArduinoThread}
+	 */
 	public String getPayload() {
 		return payload;
 	}
 
+	/**
+	 * The possible frame sequence numbers range from 1 to 99 (inclussive)
+	 * @return Returns the frame sequence number of this instance of {@link ArduinoMessage}. 
+	 */
 	public int getFrameNum(){
 		return frameSeqNum;
 	}
 	
+	/**
+	 * The possible message IDs are {@link ArduinoMessage.MSGID_PING} = 0x26 and {@link ArduinoMessage.MSGID_DATA} = 0x27
+	 * @return The message ID of this instance
+	 */
 	public int getMessageID(){
 		return msgId;
 	}
@@ -157,10 +189,15 @@ public class ArduinoMessage{
 		return checksumValue;
 	}
 	
-	public byte[] longToBytes(long x) {
+	/**
+	 * 
+	 * @param l
+	 * @return The provided long in a byte array ordered by the {@link ByteOrder.LITTLE_ENDIAN}. 
+	 */
+	public byte[] longToBytes(long l) {
 		ByteBuffer buffer = ByteBuffer.allocate(8);
 		buffer.order(ByteOrder.LITTLE_ENDIAN);
-		buffer.putLong(x);
+		buffer.putLong(l);
 
 		byte[] result = new byte[4];
 		byte[] b = buffer.array();
