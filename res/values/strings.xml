@@ -22,4 +22,7 @@
 
 	<string name="refreshButton">Refresh list</string>
 	<string name="setPlanButton">Set plan &amp; start test</string>
+	
+	<string name="title_activity_preferences">Settings</string>
+	<string name="help">Help</string>
 </resources>

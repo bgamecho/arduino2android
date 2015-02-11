@@ -1,11 +1,20 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="org.egokituz.arduino2android.MainActivity" >
-<!-- <item
+
+    <!--
+     <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:showAsAction="never"
-        android:title="@string/action_settings"/>
- -->
+        android:title="@string/action_settings"/>
+    -->
     
+        <item android:id="@+id/help"
+          android:icon="@android:drawable/ic_menu_help"
+          android:title="@string/help" />
+    
+        <item android:id="@+id/preferences" 
+            android:title="@string/title_activity_preferences"/>
+
 </menu>

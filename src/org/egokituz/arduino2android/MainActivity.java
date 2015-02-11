@@ -21,16 +21,9 @@
 
 package org.egokituz.arduino2android;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.zip.CRC32;
-import java.util.zip.Checksum;
-
 import org.egokituz.utils.ArduinoMessage;
-import org.egokituz.utils.BadMessageFrameFormat;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
@@ -40,6 +33,9 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -63,6 +59,7 @@ public class MainActivity extends Activity {
 	public static final int MESSAGE_PING_READ = 6;
 	public static final int MESSAGE_ERROR_READING = 7;
 	public static final int MESSAGE_BT_EVENT = 8;
+	public static final int SETTINGS_RESULT = 9; 
 
 	Spinner spinnerBluetooth;
 	ListView devicesListView;
@@ -75,14 +72,16 @@ public class MainActivity extends Activity {
 	private CPUMonitorThread _cpuMonitor;
 	private ArrayList<String> testParameters = new ArrayList<>();
 
-	public boolean finishApp; 
+	public boolean finishApp;
+
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		context = this;
 		setContentView(R.layout.activity_main);
 
+		context = this;
+		
 		finishApp = false;
 
 		if(!handlerThread.isAlive())
@@ -92,7 +91,6 @@ public class MainActivity extends Activity {
 		try {
 			_BTManager = new BTManagerThread(this, arduinoHandler);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 
 			int duration = Toast.LENGTH_SHORT;
@@ -106,6 +104,32 @@ public class MainActivity extends Activity {
 		_Logger = new LoggerThread(this, arduinoHandler);
 		
 		setButtons();
+	}
+	
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+	    MenuInflater inflater = getMenuInflater();
+	    inflater.inflate(R.menu.main, menu);
+	    return true;
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+	    // Handle item selection
+	    switch (item.getItemId()) {
+	        case R.id.help:
+	            //showHelp();
+	            return true;
+	        case R.id.preferences:
+	        	openPreferences();
+	        default:
+	            return super.onOptionsItemSelected(item);
+	    }
+	}
+
+	private void openPreferences() {
+		Intent i = new Intent(getApplicationContext(), PreferencesActivity.class);
+		startActivityForResult(i, SETTINGS_RESULT);
 	}
 
 	@Override 

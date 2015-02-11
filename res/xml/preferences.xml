@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    
+
+    
+    <PreferenceCategory 
+        android:key="pref_key_plan_settings"
+        android:title="@string/pref_plan_title">
+        <ListPreference 
+            android:key="pref_discoveryPlan"
+            android:title="@string/pref_discoveryPlan"
+            android:dialogTitle="@string/pref_discoveryPlan"
+            android:entries="@array/pref_discoveryPlan_entries"
+            android:entryValues="@array/pref_discoveryPlan_values"
+            android:defaultValue="@string/pref_discoveryPlan_default"/>
+        <ListPreference 
+            android:key="pref_connectionTiming"
+            android:title="@string/pref_connectionTiming"
+            android:dialogTitle="@string/pref_connectionTiming"
+            android:entries="@array/pref_connectionTiming_entries"
+            android:entryValues="@array/pref_connectionTiming_values"
+            android:defaultValue="@string/pref_connectionTiming_default"/>
+        <ListPreference 
+            android:key="pref_connectionMode"
+            android:title="@string/pref_connectionMode"
+            android:dialogTitle="@string/pref_connectionMode"
+            android:entries="@array/pref_connectionMode_entries"
+            android:entryValues="@array/pref_connectionMode_values"
+            android:defaultValue="@string/pref_connectionMode_default"/>
+     </PreferenceCategory>
+    
+    <PreferenceCategory 
+        android:key="pref_performance_settings"
+        android:title="@string/pref_performance_settings">
+		<SwitchPreference
+	        android:key="pref_performanceMode"
+	        android:title="@string/pref_performanceMode"
+	        android:summaryOn="@string/pref_performanceMode_summary_ON"
+	        android:summaryOff="@string/pref_performanceMode_summary_OFF"
+	        android:defaultValue="off"
+	        android:disableDependentsState="true"/>
+	    
+	    <SwitchPreference 
+	        android:key="pref_autoRefreshTargetList"
+	        android:title="@string/pref_autoRefreshTargetList"
+	        android:summaryOn="@string/pref_autoRefreshTargetList_summary_ON"
+	        android:summaryOff="@string/pref_autoRefreshTargetList_summary_OFF"
+	        android:defaultValue="on"
+	        android:dependency="pref_performanceMode"/>
+	    
+<!-- 	    <org.egokituz.arduino2android.gui.SeekbarPreference
+	        android:key="pref_balance"
+        	android:title="@string/pref_discoveryInterval" /> -->
+	</PreferenceCategory>
+
+</PreferenceScreen>

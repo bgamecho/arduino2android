@@ -6,13 +6,12 @@
 
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="16" />
+        android:targetSdkVersion="20" />
 
-    
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
@@ -26,6 +25,15 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        
+        <activity
+            android:name=".PreferencesActivity"
+            android:label="@string/title_activity_preferences"
+            android:parentActivityName=".MainActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="org.egokituz.arduino2android.MainActivity" />
         </activity>
     </application>
 
