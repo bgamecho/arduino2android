@@ -12,6 +12,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
+import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
@@ -37,14 +38,21 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 	}
 
 	@Override
-	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
-			String key) {
+	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+	    Preference pref = findPreference(key);
+
+	    //TODO: set summary for the preferences
+	    if (pref instanceof ListPreference) {
+	        ListPreference listPref = (ListPreference) pref;
+	        pref.setSummary(listPref.getEntry());
+	    }
+	
+	    /*
 		if (key.equals(PREF_DISCOVERY_PLAN)) {
 			Preference connectionPref = findPreference(key);
 			// Set summary to be the user-description for the selected value
 			connectionPref.setSummary(sharedPreferences.getString(key, ""));
-		}
-
+		}*/
 	}
 
 	public static Map<String, Integer> getCurrentPreferences(Context context){

@@ -253,50 +253,6 @@ public class BTManagerThread extends Thread{
 				discoveryPlan = test_parameters.get(SettingsActivity.PREF_DISCOVERY_PLAN);
 				connectionTiming = test_parameters.get(SettingsActivity.PREF_CONNECTION_TIMING);
 				connectionMode = test_parameters.get(SettingsActivity.PREF_CONNECTION_MODE);
-				
-				/*
-				int conTime = (int) msg.obj;
-				connectionTiming = conTime;
-
-				int plan = msg.arg1;
-				discoveryPlan = plan;
-
-				int connMode = msg.arg2;
-				connectionMode = connMode;*/
-				
-
-				String scenario = "";
-				switch (connectionTiming) {
-				case IMMEDIATE_STOP_DISCOVERY_CONNECT:
-					scenario+= " conn. timing: IMMEDIATE & STOP DISCOVERY ||";
-					break;
-				case IMMEDIATE_WHILE_DISCOVERING_CONNECT:
-					scenario+= " conn. timing: IMMEDIATE WHILE DISCOVERING ||";
-					break;
-				case DELAYED_CONNECT:
-					scenario+= " conn. timing: DELAYED";
-					break;
-				}
-				switch (discoveryPlan) {
-				case INITIAL_DISCOVERY:
-					scenario+= " discovery mode: ITINITAL";
-					break;
-				case CONTINUOUS_DISCOVERY:
-					scenario+= " discovery mode: CONTINUOUS";
-					break;
-				case PERIODIC_DISCOVERY:
-					scenario+= " discovery mode: PERIODIC";
-					break;
-				}
-				switch (connectionMode) {
-				case PROGRESSIVE_CONNECT:
-					scenario+= " conn. mode: PROGRESSIVE";
-					break;
-				case ALLTOGETHER_CONNECT:
-					scenario+= " conn. mode: ALL-TOGETHER";
-					break;
-				}
-				Log.v(TAG, "New scenario: "+scenario);
 			}
 		}
 	};
