@@ -33,6 +33,9 @@ import org.egokituz.arduino2android.R;
 import org.egokituz.utils.ArduinoMessage;
 
 import android.annotation.SuppressLint;
+import android.app.ActionBar;
+import android.app.ActionBar.Tab;
+import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -54,7 +57,7 @@ import android.widget.Toast;
 /**
  * @author xgardeazabal
  */
-public class MainActivity extends FragmentActivity {
+public class MainActivity extends FragmentActivity implements ActionBar.TabListener {
 	
 	/**
 	 * The {@link android.support.v4.view.PagerAdapter} that will provide fragments for each of the
@@ -110,14 +113,44 @@ public class MainActivity extends FragmentActivity {
 		m_context = this;
 		setContentView(R.layout.activity_main);
 		
-        // == Setting up the ViewPager ==
-		android.support.v4.app.FragmentManager f = getSupportFragmentManager();
-        mCustomPagerAdapter = new CustomPagerAdapter(f, m_context);
+		// Create the adapter that will return a fragment for each of the three primary sections
+		// of the app.
+        mCustomPagerAdapter = new CustomPagerAdapter(getSupportFragmentManager(), m_context);
  
+		// Set up the action bar.
+		final ActionBar actionBar = getActionBar();
+		
+		// Specify that the Home/Up button should not be enabled, since there is no hierarchical
+		// parent.
+		actionBar.setHomeButtonEnabled(false);
+		
+		// Specify that we will be displaying tabs in the action bar.
+		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+		
+		// Set up the ViewPager, attaching the adapter and setting up a listener for when the
+		// user swipes between sections.
         mViewPager = (ViewPager) findViewById(R.id.pager);
         mViewPager.setAdapter(mCustomPagerAdapter);
+		mViewPager.setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
+			@Override
+			public void onPageSelected(int position) {
+				// When swiping between different app sections, select the corresponding tab.
+				// We can also use ActionBar.Tab#select() to do this if we have a reference to the
+				// Tab.
+				actionBar.setSelectedNavigationItem(position);
+			}
+		});
 
-		
+		// For each of the sections in the app, add a tab to the action bar.
+		for (int i = 0; i < mCustomPagerAdapter.getCount(); i++) {
+			// Create a tab with text corresponding to the page title defined by the adapter.
+			// Also specify this Activity object, which implements the TabListener interface, as the
+			// listener for when this tab is selected.
+			actionBar.addTab(
+					actionBar.newTab()
+					.setText(mCustomPagerAdapter.getPageTitle(i))
+					.setTabListener(this));
+		}
 
 		m_finishApp = false;
 
@@ -433,6 +466,25 @@ public class MainActivity extends FragmentActivity {
 				}
 			}
 		};
+	}
+
+
+	@Override
+	public void onTabSelected(Tab tab, FragmentTransaction ft) {
+		// When the given tab is selected, switch to the corresponding page in the ViewPager.
+		mViewPager.setCurrentItem(tab.getPosition());
+	}
+
+	@Override
+	public void onTabUnselected(Tab tab, FragmentTransaction ft) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onTabReselected(Tab tab, FragmentTransaction ft) {
+		// TODO Auto-generated method stub
+		
 	}
 
 

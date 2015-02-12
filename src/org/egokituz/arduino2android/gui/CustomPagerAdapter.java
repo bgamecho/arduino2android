@@ -28,20 +28,29 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
     // It is called when the Adapter needs a fragment
     // and it does not exists.
     public Fragment getItem(int position) {
+    	
+		switch (position) {
+		case 0:
+			// The first section of the app is the test activity
+			return new TestSectionFragment();
+
+		default:
+	        // Create fragment object
+	        Fragment fragment = new DemoFragment();
+	 
+	        // Attach some data to it that we'll
+	        // use to populate our fragment layouts
+	        Bundle args = new Bundle();
+	        args.putInt("page_position", position + 1);
+	 
+	        // Set the arguments on the fragment
+	        // that will be fetched in DemoFragment@onCreateView
+	        fragment.setArguments(args);
+	 
+	        return fragment;
+		}
  
-        // Create fragment object
-        Fragment fragment = new DemoFragment();
- 
-        // Attach some data to it that we'll
-        // use to populate our fragment layouts
-        Bundle args = new Bundle();
-        args.putInt("page_position", position + 1);
- 
-        // Set the arguments on the fragment
-        // that will be fetched in DemoFragment@onCreateView
-        fragment.setArguments(args);
- 
-        return fragment;
+
     }
  
     @Override
@@ -50,8 +59,8 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
     }
     
 
-//    @Override
-//    public CharSequence getPageTitle(int position) {
-//        return "Section " + (position + 1);
-//    }
+    @Override
+    public CharSequence getPageTitle(int position) {
+        return "Section " + (position + 1);
+    }
 }
