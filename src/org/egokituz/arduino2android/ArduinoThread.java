@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
+import org.egokituz.arduino2android.gui.MainActivity;
 import org.egokituz.utils.ArduinoMessage;
 import org.egokituz.utils.BadMessageFrameFormat;
 

@@ -22,6 +22,8 @@ package org.egokituz.arduino2android;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+import org.egokituz.arduino2android.gui.MainActivity;
+
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;

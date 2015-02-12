@@ -30,6 +30,8 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.egokituz.arduino2android.gui.SettingsActivity;
+
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -47,13 +49,13 @@ public class LoggerThread extends Thread{
 
 	private static final String TAG = "Logger";
 
-	protected static final int MESSAGE_WRITE_DATA = 0;
-	protected static final int MESSAGE_WRITE_BATTERY = 1;
-	protected static final int MESSAGE_CPU = 2;
-	protected static final int MESSAGE_PING = 3;
-	protected static final int MESSAGE_ERROR = 4;
-	protected static final int MESSAGE_EVENT = 5;
-	protected static final int MESSAGE_NEW_TEST = 6;
+	public static final int MESSAGE_WRITE_DATA = 0;
+	public static final int MESSAGE_WRITE_BATTERY = 1;
+	public static final int MESSAGE_CPU = 2;
+	public static final int MESSAGE_PING = 3;
+	public static final int MESSAGE_ERROR = 4;
+	public static final int MESSAGE_EVENT = 5;
+	public static final int MESSAGE_NEW_TEST = 6;
 
 	private Context m_mainContext;
 	private Handler m_mainHandler;
@@ -203,7 +205,7 @@ public class LoggerThread extends Thread{
 	/**
 	 * Stops the thread in a safe way
 	 */
-	protected void finalize() {
+	public void finalize() {
 		//sendLogByEmail();
 		m_exitCondition = true;
 	}

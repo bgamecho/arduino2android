@@ -19,6 +19,8 @@
  */
 package org.egokituz.arduino2android;
 
+import org.egokituz.arduino2android.gui.MainActivity;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;

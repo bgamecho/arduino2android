@@ -1,12 +1,17 @@
 /**
  * 
  */
-package org.egokituz.arduino2android;
+package org.egokituz.arduino2android.gui;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.egokituz.arduino2android.BTManagerThread;
+import org.egokituz.arduino2android.R;
+import org.egokituz.arduino2android.R.string;
+import org.egokituz.arduino2android.R.xml;
 
 import android.content.Context;
 import android.content.SharedPreferences;

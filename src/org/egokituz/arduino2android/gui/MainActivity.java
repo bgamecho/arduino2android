@@ -19,23 +19,28 @@
  */
 
 
-package org.egokituz.arduino2android;
+package org.egokituz.arduino2android.gui;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 
+import org.egokituz.arduino2android.BTManagerThread;
+import org.egokituz.arduino2android.BatteryMonitorThread;
+import org.egokituz.arduino2android.CPUMonitorThread;
+import org.egokituz.arduino2android.LoggerThread;
+import org.egokituz.arduino2android.R;
 import org.egokituz.utils.ArduinoMessage;
+
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
-import android.preference.PreferenceManager;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -43,19 +48,33 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-
 import android.widget.Spinner;
 import android.widget.Toast;
 
 /**
  * @author xgardeazabal
  */
-public class MainActivity extends Activity {
+public class MainActivity extends FragmentActivity {
+	
+	/**
+	 * The {@link android.support.v4.view.PagerAdapter} that will provide fragments for each of the
+	 * three primary sections of the app. We use a {@link android.support.v4.app.FragmentPagerAdapter}
+	 * derivative, which will keep every loaded fragment in memory. If this becomes too memory
+	 * intensive, it may be best to switch to a {@link android.support.v4.app.FragmentStatePagerAdapter}.
+	 */
+	CustomPagerAdapter mCustomPagerAdapter;
+
+	/**
+	 * The {@link ViewPager} that will display the three primary sections of the app, one at a
+	 * time.
+	 */
+	ViewPager mViewPager;
+	
 
 	public final static String TAG = "ArduinoActivity"; // Tag to identify this class' messages in the console or LogCat
 
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
-	private static final int REQUEST_ENABLE_BT = 1;
+	public static final int REQUEST_ENABLE_BT = 1;
 	public static final int MESSAGE_DATA_READ = 2;
 	public static final int MESSAGE_BATTERY_STATE_CHANGED = 4;
 	public static final int MESSAGE_CPU_USAGE = 5;
@@ -83,12 +102,22 @@ public class MainActivity extends Activity {
 	private HashMap m_testPlanParameters; // Used to store current plan settings
 
 
+
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
-
 		m_context = this;
+		setContentView(R.layout.activity_main);
+		
+        // == Setting up the ViewPager ==
+		android.support.v4.app.FragmentManager f = getSupportFragmentManager();
+        mCustomPagerAdapter = new CustomPagerAdapter(f, m_context);
+ 
+        mViewPager = (ViewPager) findViewById(R.id.pager);
+        mViewPager.setAdapter(mCustomPagerAdapter);
+
+		
 
 		m_finishApp = false;
 

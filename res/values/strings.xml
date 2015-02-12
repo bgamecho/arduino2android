@@ -3,7 +3,6 @@
 
     <!-- App GUI Strings -->
     <string name="app_name">Arduino2android</string>
-    <string name="hello_world">Hello world!</string>
     
     <string name="planLabel">Plan Settings</string>
         
@@ -22,7 +21,6 @@
     <string name="delayed">Delayed</string>
 
 	<string name="refreshButton">Refresh list</string>
-	<string name="setPlanButton">Set plan &amp; start test</string>
 	<string name="beginTestButton">Begin Test</string>
 	
 	<string name="title_activity_preferences">Settings</string>

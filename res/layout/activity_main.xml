@@ -1,4 +1,12 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+
+<android.support.v4.view.ViewPager
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pager"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
+
+<!-- <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -24,10 +32,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <!-- <ListView -->
-    <!-- android:id="@+id/listViewDevices" -->
-    <!-- android:layout_width="match_parent" -->
-    <!-- android:layout_height="fill_parent" -->
-    <!-- android:layout_weight="1" /> -->
+    <ListView
+    android:id="@+id/listViewDevices"
+    android:layout_width="match_parent"
+    android:layout_height="fill_parent"
+    android:layout_weight="1" />
 
-</LinearLayout>
+</LinearLayout> -->

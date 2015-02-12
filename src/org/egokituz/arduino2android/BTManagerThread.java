@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.egokituz.arduino2android.gui.MainActivity;
+import org.egokituz.arduino2android.gui.SettingsActivity;
+
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
