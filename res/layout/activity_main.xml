@@ -136,7 +136,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:onClick="setPlanParameters"
-        android:text="@string/setPlanButton" />
+        android:text="@string/setPlanButton"
+        android:enabled="false"/>
+    
+    <Button
+        android:id="@+id/buttonBeginTest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="beginTest"
+        android:text="@string/beginTestButton" />
 
     <Button
         android:id="@+id/buttonRefresh"

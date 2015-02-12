@@ -248,6 +248,13 @@ public class BTManagerThread extends Thread{
 				break;
 
 			case MESSAGE_SET_SCENARIO:
+				HashMap<String, Integer> test_parameters = (HashMap) msg.obj; // hash-map containing the test parameters defined through the preferences of the app
+				
+				discoveryPlan = test_parameters.get(SettingsActivity.PREF_DISCOVERY_PLAN);
+				connectionTiming = test_parameters.get(SettingsActivity.PREF_CONNECTION_TIMING);
+				connectionMode = test_parameters.get(SettingsActivity.PREF_CONNECTION_MODE);
+				
+				/*
 				int conTime = (int) msg.obj;
 				connectionTiming = conTime;
 
@@ -255,7 +262,8 @@ public class BTManagerThread extends Thread{
 				discoveryPlan = plan;
 
 				int connMode = msg.arg2;
-				connectionMode = connMode;
+				connectionMode = connMode;*/
+				
 
 				String scenario = "";
 				switch (connectionTiming) {

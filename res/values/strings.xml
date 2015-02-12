@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!-- App GUI Strings -->
     <string name="app_name">Arduino2android</string>
     <string name="hello_world">Hello world!</string>
     
@@ -22,7 +23,13 @@
 
 	<string name="refreshButton">Refresh list</string>
 	<string name="setPlanButton">Set plan &amp; start test</string>
+	<string name="beginTestButton">Begin Test</string>
 	
 	<string name="title_activity_preferences">Settings</string>
 	<string name="help">Help</string>
+	<string name="saveLogs">Save log files</string>
+	
+	
+	
+	
 </resources>

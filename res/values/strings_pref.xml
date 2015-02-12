@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     
-    
     <string name="pref_plan_title">Discovery Plan</string>
     <string name="pref_discoveryPlan">Discovery Plan</string>
     <string-array name="pref_discoveryPlan_entries">
@@ -10,25 +9,30 @@
         <item>Periodic</item>
     </string-array>
     <string-array name="pref_discoveryPlan_values">
-        <item>initial</item>
-        <item>continuous</item>
-        <item>periodic</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
     </string-array>
-    <string name="pref_discoveryPlan_default">initial</string>
+    
+    <!-- Discovery plans: initial (1), continuous (2) or periodic (3) -->
+    <string name="pref_discoveryPlan_default">1</string>
 
 
     <string name="pref_connectionTiming">Connection Timing</string>
     <string-array name="pref_connectionTiming_entries">
-        <item>Immediate (strop discovery)</item>
         <item>Immediate (while discovering)</item>
+        <item>Immediate (strop discovery)</item>
         <item>Delayed</item>
     </string-array>
     <string-array name="pref_connectionTiming_values">
-        <item>stop</item>
-        <item>while</item>
-        <item>delayed</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
     </string-array>
-    <string name="pref_connectionTiming_default">delayed</string>
+    
+    
+    <!-- Connection timing: immediate-while (1), immediate-stop (2) or delayed (3) -->
+    <string name="pref_connectionTiming_default">3</string>
     
     
     <string name="pref_connectionMode">Connection Mode</string>
@@ -37,10 +41,13 @@
         <item>All together</item>
     </string-array>
     <string-array name="pref_connectionMode_values">
-        <item>progressive</item>
-        <item>together</item>
+        <item>1</item>
+        <item>2</item>
     </string-array>
-    <string name="pref_connectionMode_default">together</string>
+    
+    <!-- Connection modes: progressive (1) or alltogether (2) -->
+    <string name="pref_connectionMode_default">2</string>
+    
     
     <string name="pref_performance_settings">Performance</string>
     <string name="pref_performanceMode">High performance</string>

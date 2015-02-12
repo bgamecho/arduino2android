@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
     
+    <!-- Global preferences / settings menu -->
 
-    
+    <!-- Test plan settings (discovery plan, connection timing and connection mode) -->
     <PreferenceCategory 
         android:key="pref_key_plan_settings"
         android:title="@string/pref_plan_title">
@@ -29,6 +30,7 @@
             android:defaultValue="@string/pref_connectionMode_default"/>
      </PreferenceCategory>
     
+    <!-- General perfomance settings -->
     <PreferenceCategory 
         android:key="pref_performance_settings"
         android:title="@string/pref_performance_settings">
@@ -48,9 +50,9 @@
 	        android:defaultValue="on"
 	        android:dependency="pref_performanceMode"/>
 	    
-<!-- 	    <org.egokituz.arduino2android.gui.SeekbarPreference
+ 	    <org.egokituz.arduino2android.gui.SeekbarPreference
 	        android:key="pref_balance"
-        	android:title="@string/pref_discoveryInterval" /> -->
+        	android:title="@string/pref_discoveryInterval" />
 	</PreferenceCategory>
 
 </PreferenceScreen>

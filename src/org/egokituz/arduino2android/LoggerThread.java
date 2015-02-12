@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import android.content.Context;
 import android.content.Intent;
@@ -54,14 +55,14 @@ public class LoggerThread extends Thread{
 	protected static final int MESSAGE_EVENT = 5;
 	protected static final int MESSAGE_NEW_TEST = 6;
 
-	private Context mainCtx;
-	private Handler mainHandler;
+	private Context m_mainContext;
+	private Handler m_mainHandler;
 
-	private boolean exit_condition = false;
+	private boolean m_exitCondition = false;
 
-	private boolean testInProcess = false;
+	private boolean m_testInProcess = false;
 
-	public Handler logHandler = new Handler(){
+	public Handler m_logHandler = new Handler(){
 
 		@SuppressWarnings("unchecked")
 		@Override
@@ -103,12 +104,14 @@ public class LoggerThread extends Thread{
 				appendLog("events.txt",textQueue);
 				break;
 			case MESSAGE_NEW_TEST:
-				if(testInProcess)
+				if(m_testInProcess)
 					createNextLogFolder();
-				ArrayList<String> parametersQueue = (ArrayList<String>) msg.obj;
+				HashMap<String, Integer> preferences = (HashMap<String, Integer>) msg.obj;
+				
+				ArrayList<String> parametersQueue = (ArrayList<String>) SettingsActivity.preferenceListToString(preferences);
 				parametersQueue.add(0, getDeviceName());
 				appendLog("testParameters.txt",parametersQueue);
-				testInProcess = true;
+				m_testInProcess = true;
 				break;
 			}
 		}
@@ -118,8 +121,8 @@ public class LoggerThread extends Thread{
 	public LoggerThread(Context mainCtx, Handler mainHandler) {
 		super();
 		this.setName("loggerThread");
-		this.mainCtx = mainCtx;
-		this.mainHandler = mainHandler;
+		this.m_mainContext = mainCtx;
+		this.m_mainHandler = mainHandler;
 
 		if(!RootDir.exists())
 			RootDir.mkdirs();
@@ -149,7 +152,7 @@ public class LoggerThread extends Thread{
 	public void run() {
 		super.run();
 
-		while(!exit_condition){
+		while(!m_exitCondition){
 			try {
 				Thread.sleep(999);
 			} catch (InterruptedException e) {
@@ -202,7 +205,7 @@ public class LoggerThread extends Thread{
 	 */
 	protected void finalize() {
 		//sendLogByEmail();
-		exit_condition = true;
+		m_exitCondition = true;
 	}
 
 	public String getDeviceName() {
@@ -228,7 +231,7 @@ public class LoggerThread extends Thread{
 			i.putExtra(Intent.EXTRA_SUBJECT,"android - email with attachment");
 			i.putExtra(Intent.EXTRA_TEXT,"");
 			i.putExtra(Intent.EXTRA_STREAM, uri);
-			mainCtx.startActivity(Intent.createChooser(i, "Select application"));
+			m_mainContext.startActivity(Intent.createChooser(i, "Select application"));
 		} 
 		catch (UnsupportedEncodingException e) 
 		{

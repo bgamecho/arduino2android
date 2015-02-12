@@ -23,15 +23,19 @@ package org.egokituz.arduino2android;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+
 import org.egokituz.utils.ArduinoMessage;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -49,7 +53,7 @@ import android.widget.Toast;
  */
 public class MainActivity extends Activity {
 
-	public final static String TAG = "ArduinoActivity";
+	public final static String TAG = "ArduinoActivity"; // Tag to identify this class' messages in the console or LogCat
 
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	private static final int REQUEST_ENABLE_BT = 1;
@@ -64,15 +68,20 @@ public class MainActivity extends Activity {
 	Spinner spinnerBluetooth;
 	ListView devicesListView;
 	
-	Context context;
+	Context m_context; // Main Context
 
-	private BTManagerThread _BTManager;
-	private BatteryMonitorThread _BatteryMonitor;
-	private LoggerThread _Logger;
-	private CPUMonitorThread _cpuMonitor;
-	private ArrayList<String> testParameters = new ArrayList<>();
+	//// Module threads ///////////////////
+	private BTManagerThread m_BTManager;
+	private BatteryMonitorThread m_BatteryMonitor;
+	private LoggerThread m_Logger;
+	private CPUMonitorThread m_cpuMonitor;
+	
+	
+	private ArrayList<String> m_testParameters = new ArrayList<>();
 
-	public boolean finishApp;
+	public boolean m_finishApp; // Flag for managing activity termination
+
+	private HashMap m_testPlanParameters; // Used to store current plan settings
 
 
 	@Override
@@ -80,16 +89,16 @@ public class MainActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		context = this;
+		m_context = this;
 		
-		finishApp = false;
+		m_finishApp = false;
 
 		if(!handlerThread.isAlive())
 			handlerThread.start();
 		createHandler();
 
 		try {
-			_BTManager = new BTManagerThread(this, arduinoHandler);
+			m_BTManager = new BTManagerThread(this, arduinoHandler);
 		} catch (Exception e) {
 			e.printStackTrace();
 
@@ -99,9 +108,9 @@ public class MainActivity extends Activity {
 			this.finish();
 		}
 
-		_BatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
-		_cpuMonitor = new CPUMonitorThread(this, arduinoHandler);
-		_Logger = new LoggerThread(this, arduinoHandler);
+		m_BatteryMonitor = new BatteryMonitorThread(this, arduinoHandler);
+		m_cpuMonitor = new CPUMonitorThread(this, arduinoHandler);
+		m_Logger = new LoggerThread(this, arduinoHandler);
 		
 		setButtons();
 	}
@@ -109,7 +118,7 @@ public class MainActivity extends Activity {
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 	    MenuInflater inflater = getMenuInflater();
-	    inflater.inflate(R.menu.main, menu);
+	    inflater.inflate(R.menu.menu, menu);
 	    return true;
 	}
 	
@@ -120,16 +129,16 @@ public class MainActivity extends Activity {
 	        case R.id.help:
 	            //showHelp();
 	            return true;
+	            
 	        case R.id.preferences:
-	        	openPreferences();
+	        	// Call SettingsActivity intent
+	    		Intent i = new Intent(getApplicationContext(), SettingsActivity.class);
+	    		startActivityForResult(i, SETTINGS_RESULT);
+	    		return true;
+	    		
 	        default:
 	            return super.onOptionsItemSelected(item);
 	    }
-	}
-
-	private void openPreferences() {
-		Intent i = new Intent(getApplicationContext(), PreferencesActivity.class);
-		startActivityForResult(i, SETTINGS_RESULT);
 	}
 
 	@Override 
@@ -138,13 +147,15 @@ public class MainActivity extends Activity {
 		Log.v(TAG, "Arduino Activity --OnStart()--");
 
 
-		if(!_Logger.isAlive())
-			_Logger.start();
-		//Start the monitors
-		if(!_BatteryMonitor.isAlive())
-			_BatteryMonitor.start();
-		if(!_cpuMonitor.isAlive())
-			_cpuMonitor.start();
+		// Start the logger thread
+		if(!m_Logger.isAlive())
+			m_Logger.start();
+		
+		//Start the monitoring modules' threads
+		if(!m_BatteryMonitor.isAlive())
+			m_BatteryMonitor.start();
+		if(!m_cpuMonitor.isAlive())
+			m_cpuMonitor.start();
 
 	}
 
@@ -184,15 +195,15 @@ public class MainActivity extends Activity {
 		super.onDestroy();
 
 		//Finalize threads
-		if(!finishApp){
-			_BTManager.finalize();
-			_BatteryMonitor.finalize();
-			_cpuMonitor.finalize();
-			_Logger.finalize();
+		if(!m_finishApp){
+			m_BTManager.finalize();
+			m_BatteryMonitor.finalize();
+			m_cpuMonitor.finalize();
+			m_Logger.finalize();
 			//Shut down the HandlerThread
 			handlerThread.quit();
 		}
-		finishApp = true;
+		m_finishApp = true;
 	}
 
 
@@ -202,15 +213,15 @@ public class MainActivity extends Activity {
 		super.finish();
 
 		//Finalize threads
-		if(!finishApp){
-			_BTManager.finalize();
-			_BatteryMonitor.finalize();
-			_cpuMonitor.finalize();
-			_Logger.finalize();
+		if(!m_finishApp){
+			m_BTManager.finalize();
+			m_BatteryMonitor.finalize();
+			m_cpuMonitor.finalize();
+			m_Logger.finalize();
 			//Shut down the HandlerThread
 			handlerThread.quit();
 		}
-		finishApp = true;
+		m_finishApp = true;
 	}
 
 /*
@@ -244,10 +255,33 @@ public class MainActivity extends Activity {
 		RadioButton connectionTiming = (RadioButton) findViewById(R.id.radio_delayed);
 		connectionTiming.setChecked(true);
 	}
-
+	
+	/**
+	 * Method called with the onClick event of the "Begin Test" button.
+	 * <p>Retrieves the current test parapemeters from the app's preferences, 
+	 * notifies the logger to begin its work, sends the test parameters to the
+	 * BluetoothManager module, and finally starts said module.
+	 * @param view
+	 */
+	public void beginTest(View view){
+		// Retrieve the test parameters from the app's settings/preferences
+		m_testPlanParameters = (HashMap) SettingsActivity.getCurrentPreferences(m_context);
+	    
+		// Tell the logger that a new Test has begun  //NOT ANYMORE: a new log folder may be created with the new parameters
+		m_Logger.m_logHandler.obtainMessage(LoggerThread.MESSAGE_NEW_TEST, m_testPlanParameters).sendToTarget();
+		
+		//TODO: send the test parameters to the BluetoothManager-thread
+		// Set the Bluetooth Manager's plan with the selected parameters
+		Message sendMsg;
+		sendMsg = m_BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,m_testPlanParameters); // TODO change the obj of the message
+		sendMsg.sendToTarget();
+		
+		// Begin a new test
+		m_BTManager.start();
+	}
 
 	public void setPlanParameters(View view){
-		testParameters.clear();
+		m_testParameters.clear();
 		int discoveryMode = 0, connectionMode = 0, connectionTiming = 0;
 
 		RadioGroup discoveryGroup = (RadioGroup) findViewById(R.id.discoveryGroup);
@@ -255,15 +289,15 @@ public class MainActivity extends Activity {
 		switch (discoveryRadioButtonID) {
 		case R.id.radio_discovery_initial:
 			discoveryMode = BTManagerThread.INITIAL_DISCOVERY;
-			testParameters.add("INITIAL_DISCOVERY");
+			m_testParameters.add("INITIAL_DISCOVERY");
 			break;
 		case R.id.radio_discovery_continuous:
 			discoveryMode = BTManagerThread.CONTINUOUS_DISCOVERY;
-			testParameters.add("CONTINUOUS_DISCOVERY");
+			m_testParameters.add("CONTINUOUS_DISCOVERY");
 			break;
 		case R.id.radio_discovery_periodic:
 			discoveryMode = BTManagerThread.PERIODIC_DISCOVERY;
-			testParameters.add("PERIODIC_DISCOVERY");
+			m_testParameters.add("PERIODIC_DISCOVERY");
 			break;
 		}
 
@@ -272,11 +306,11 @@ public class MainActivity extends Activity {
 		switch (connModeRadioButtonID) {
 		case R.id.radio_progressive:
 			connectionMode = BTManagerThread.PROGRESSIVE_CONNECT;
-			testParameters.add("PROGRESSIVE_CONNECT");
+			m_testParameters.add("PROGRESSIVE_CONNECT");
 			break;
 		case R.id.radio_alltogether:
 			connectionMode = BTManagerThread.ALLTOGETHER_CONNECT;
-			testParameters.add("ALLTOGETHER_CONNECT");
+			m_testParameters.add("ALLTOGETHER_CONNECT");
 			break;
 		}
 
@@ -285,24 +319,24 @@ public class MainActivity extends Activity {
 		switch (connTimingRadioButtonID) {
 		case R.id.radio_immediate_stop:
 			connectionTiming = BTManagerThread.IMMEDIATE_STOP_DISCOVERY_CONNECT;
-			testParameters.add("IMMEDIATE_STOP_DISCOVERY_CONNECT");
+			m_testParameters.add("IMMEDIATE_STOP_DISCOVERY_CONNECT");
 			break;
 		case R.id.radio_immediate_while:
 			connectionTiming = BTManagerThread.IMMEDIATE_WHILE_DISCOVERING_CONNECT;
-			testParameters.add("IMMEDIATE_WHILE_DISCOVERING_CONNECT");
+			m_testParameters.add("IMMEDIATE_WHILE_DISCOVERING_CONNECT");
 			break;
 		case R.id.radio_delayed:
 			connectionTiming = BTManagerThread.DELAYED_CONNECT;
-			testParameters.add("DELAYED_CONNECT");
+			m_testParameters.add("DELAYED_CONNECT");
 			break;
 		}
 
 		//Kill current BTManager, and subsequently all the ArduinoThreads 
-		if(_BTManager.isAlive()){
+		if(m_BTManager.isAlive()){
 			Log.v(TAG, "Restarting BTManager thread with new parameters...");
-			_BTManager.finalize();
+			m_BTManager.finalize();
 			try {
-				_BTManager = new BTManagerThread(this, arduinoHandler);
+				m_BTManager = new BTManagerThread(this, arduinoHandler);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -317,16 +351,16 @@ public class MainActivity extends Activity {
 
 		
 		//Tell the logger that a new Test has begun  //NOT ANYMORE: a new log folder may be created with the new parameters
-		_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_NEW_TEST, testParameters).sendToTarget();
+		m_Logger.m_logHandler.obtainMessage(LoggerThread.MESSAGE_NEW_TEST, m_testParameters).sendToTarget();
 
 		// Set the Bluetooth Manager's plan with the selected parameters
 		Message sendMsg;
-		sendMsg = _BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,connectionTiming); // TODO change the obj of the message
+		sendMsg = m_BTManager.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,connectionTiming); // TODO change the obj of the message
 		sendMsg.arg1 = discoveryMode;
 		sendMsg.arg2 = connectionMode;
 		sendMsg.sendToTarget();
 		
-		_BTManager.start();			
+		m_BTManager.start();			
 	}
 
 /**
@@ -349,7 +383,7 @@ public void updateSpinner(View view){
 	// TODO update spinned with running threads
 	try {
 		ArrayList<String> threads = new ArrayList<String>();
-		Collections.addAll(threads, _BTManager.getConnectedArduinos());
+		Collections.addAll(threads, m_BTManager.getConnectedArduinos());
 		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
 				android.R.layout.simple_spinner_item, threads);
 
@@ -368,8 +402,8 @@ public void updateSpinner(View view){
 public String[] getConnectedDevices(){
 	String[] result = null;
 
-	if(_BTManager != null && _BTManager.isAlive())
-		result = _BTManager.getConnectedArduinos();
+	if(m_BTManager != null && m_BTManager.isAlive())
+		result = m_BTManager.getConnectedArduinos();
 	return result;
 
 }
@@ -401,7 +435,7 @@ private void createHandler(){
 
 				ArrayList<String> pingQueue = (ArrayList<String>) msg.obj;
 				// write to log file
-				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_PING, pingQueue).sendToTarget();
+				m_Logger.m_logHandler.obtainMessage(LoggerThread.MESSAGE_PING, pingQueue).sendToTarget();
 				break;
 				
 			case MESSAGE_DATA_READ:
@@ -409,7 +443,7 @@ private void createHandler(){
 				// This message implies that 99 well formed DATA messages were read by an Arduino Thread
 
 				ArrayList<String> dataQueue = (ArrayList<String>) msg.obj;
-				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_DATA, dataQueue).sendToTarget();
+				m_Logger.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_DATA, dataQueue).sendToTarget();
 				break;
 
 			case MESSAGE_BATTERY_STATE_CHANGED:
@@ -421,7 +455,7 @@ private void createHandler(){
 
 				// call the Logger to write the battery load
 				sendMsg = timestamp+" "+batteryLoad;
-				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, sendMsg).sendToTarget();
+				m_Logger.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, sendMsg).sendToTarget();
 
 				break;
 
@@ -434,7 +468,7 @@ private void createHandler(){
 
 				// call the Logger to write the battery load
 				sendMsg = timestamp+" "+cpu;
-				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_CPU, sendMsg).sendToTarget();
+				m_Logger.m_logHandler.obtainMessage(LoggerThread.MESSAGE_CPU, sendMsg).sendToTarget();
 
 				break;
 				
@@ -445,7 +479,7 @@ private void createHandler(){
 				String error = (String) msg.obj;
 				
 				// write to log file
-				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_ERROR, error).sendToTarget();
+				m_Logger.m_logHandler.obtainMessage(LoggerThread.MESSAGE_ERROR, error).sendToTarget();
 
 				break;
 				
@@ -456,10 +490,10 @@ private void createHandler(){
 				String event = (String) msg.obj;
 				
 				// write to log file
-				_Logger.logHandler.obtainMessage(LoggerThread.MESSAGE_EVENT, event).sendToTarget();
+				m_Logger.m_logHandler.obtainMessage(LoggerThread.MESSAGE_EVENT, event).sendToTarget();
 
 				int duration = Toast.LENGTH_SHORT;
-				Toast toast = Toast.makeText(context, event, duration);
+				Toast toast = Toast.makeText(m_context, event, duration);
 				toast.show();
 				break;
 			}
