@@ -28,7 +28,6 @@ import java.util.Map;
 
 import org.egokituz.arduino2android.gui.SettingsActivity;
 
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -50,7 +49,7 @@ public class BTManagerThread extends Thread{
 
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	protected static final int MESSAGE_ERROR_CREATING_BT_THREAD = 0;
-	private static final int REQUEST_ENABLE_BT = 1;
+	
 	public static final int MESSAGE_BT_THREAD_CREATED = 2;
 	public static final int MESSAGE_SEND_COMMAND = 3;
 	public static final int MESSAGE_CONNECTION_LOST = 4;
@@ -92,22 +91,35 @@ public class BTManagerThread extends Thread{
 
 	private ArduinoPlannerThread _plannerThread;
 
-	private final BluetoothAdapter _BluetoothAdapter;
+	/**
+	 * The Bluetooth adapter of the device
+	 */
+	private BluetoothAdapter _BluetoothAdapter;
 
-	// List of currently connected Arduinos (with an independent thread for each) 
-	//private List<BTDeviceThread> myArduinos;
+	/**
+	 *  List of currently connected Arduinos (with an independent thread for each)
+	 *  private List<BTDeviceThread> myArduinos; 
+	 */
 	private Map<String,ArduinoThread> myArduinoThreads;
 
-	// New discovered bluetooth devices list
+	/**
+	 * New discovered bluetooth devices list
+	 */
 	private List<BluetoothDevice> newDevicesList;
 
-	// Arduino devices ready to be paired
+	/**
+	 * Arduino devices ready to be paired
+	 */
 	private Map<String,BluetoothDevice> connectableArduinos;
 
-	// List of ignored devices that should never be used 
+	/**
+	 * List of ignored devices that should never be used 
+	 */
 	private Map<String,BluetoothDevice> ignoredDevicesList;
 
-	// List of devices waiting to be connected (a connection request has been dispatched)
+	/**
+	 * List of devices waiting to be connected (a connection request has been dispatched)
+	 */
 	private Map<String,BluetoothDevice> waitingToBeConnected;
 
 	/**
@@ -130,21 +142,26 @@ public class BTManagerThread extends Thread{
 		connectableArduinos = new HashMap<String,BluetoothDevice>();
 		ignoredDevicesList = new HashMap<String,BluetoothDevice>();
 		waitingToBeConnected = new HashMap<String,BluetoothDevice>();
-
-		//TODO set BLUETOOTH
-		_BluetoothAdapter = BluetoothAdapter.getDefaultAdapter();    
+		
+		// Get the Bluetooth adapter of this device
+		_BluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+		
+		// Check if this device supports Bluetooth
 		if (_BluetoothAdapter == null) {
 			// TODO Device does not support Bluetooth
 			throw new Exception("This device does not support Bluetooth");
 		}
-		if (!_BluetoothAdapter.isEnabled()){
-			Log.e(TAG, "Bluetooth disabled");
-			Log.v(TAG, "Asking for user permission to activate Bluetooth");
-			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-			((Activity) mainCtx).startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-			//TODO implement onActivityResult in main Activity
-		}
 
+		// create activity asking the user to turn on Bluetooth if it is not already enabled
+		requestBluetoothEnable();
+
+		registerBroadcastReceivers();
+	}
+
+	/**
+	 * Registers the desired intent filters to the {@link BroadcastReceiver} of the main context
+	 */
+	private void registerBroadcastReceivers() {
 		// Register the BroadcastReceivers
 		// When finalizing, remember to remove the ones that are not needed!
 		IntentFilter filter0 = new IntentFilter(BluetoothDevice.ACTION_FOUND);
@@ -162,6 +179,24 @@ public class BTManagerThread extends Thread{
 		mainCtx.registerReceiver(myReceiver, filter6);
 		mainCtx.registerReceiver(myReceiver, filter4);
 		mainCtx.registerReceiver(myReceiver, filter5);
+	}
+
+	/**
+	 * This method starts a new activity that prompts the user to enable Bluetooth
+	 * @throws Exception This device does not support Bluetooth
+	 */
+	private void requestBluetoothEnable() throws Exception {
+		// If Bluetooth is not already enabled, prompt and ask the ser to enable it
+		if (!_BluetoothAdapter.isEnabled()){
+			Log.e(TAG, "Bluetooth disabled");
+			Log.v(TAG, "Asking for user permission to activate Bluetooth");
+			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+			enableBtIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			mainCtx.startActivity(enableBtIntent); // Start a new activity to turn Bluetooth ON
+			
+			//((Activity) mainCtx).startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+			//TODO implement onActivityResult in main Activity
+		}
 	}
 
 	/**
@@ -278,7 +313,6 @@ public class BTManagerThread extends Thread{
 
 			switch (action){
 			case BluetoothDevice.ACTION_FOUND:
-				//TODO When discovery finds a device
 
 				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				devId= device.getName()+"-"+device.getAddress();

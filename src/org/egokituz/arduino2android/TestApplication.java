@@ -11,7 +11,9 @@ import org.egokituz.utils.ArduinoMessage;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
@@ -53,7 +55,11 @@ public class TestApplication extends Application {
 	private Context m_context;
 	
 	public TestApplication() {
-		// TODO Auto-generated constructor stub
+		/**
+		 * ##############################################
+		 */
+		// TODO CHECK IF THIS IS THE MAIN CONTEXT
+		m_context = getBaseContext();
 	}
 
 	public TestApplication(Context c) {
@@ -65,6 +71,9 @@ public class TestApplication extends Application {
 		// TODO Auto-generated method stub
 		super.onCreate();
 		
+		if(m_context == null)
+			m_context = getBaseContext();
+		
 		m_finishApp = false;
 
 		if(!handlerThread.isAlive())
@@ -72,18 +81,18 @@ public class TestApplication extends Application {
 		createHandler();
 
 		try {
-			m_BTManager_thread = new BTManagerThread(this, arduinoHandler);
+			m_BTManager_thread = new BTManagerThread(m_context, arduinoHandler);
 		} catch (Exception e) {
 			e.printStackTrace();
 
 			int duration = Toast.LENGTH_SHORT;
-			Toast toast = Toast.makeText(this, "Could not start the BT manager", duration);
+			Toast toast = Toast.makeText(m_context, "Could not start the BT manager", duration);
 			toast.show();
 		}
 
-		m_BatteryMonitor_thread = new BatteryMonitorThread(this, arduinoHandler);
-		m_cpuMonitor_thread = new CPUMonitorThread(this, arduinoHandler);
-		m_Logger_thread = new LoggerThread(this, arduinoHandler);
+		m_BatteryMonitor_thread = new BatteryMonitorThread(m_context, arduinoHandler);
+		m_cpuMonitor_thread = new CPUMonitorThread(m_context, arduinoHandler);
+		m_Logger_thread = new LoggerThread(m_context, arduinoHandler);
 
 		// Start the logger thread
 		if(!m_Logger_thread.isAlive())

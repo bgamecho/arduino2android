@@ -26,7 +26,9 @@ import org.egokituz.arduino2android.TestApplication;
 
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;
+import android.app.Application;
 import android.app.FragmentTransaction;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -44,11 +46,17 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 
 	public final static String TAG = "MainActivity"; // Tag to identify this class' messages in the console or LogCat
 
-	public static final int SETTINGS_RESULT = 9; 
+	public static final int SETTINGS_RESULT = 2; 
 
 
+	/**
+	 * Main Context of the app
+	 */
 	Context m_context; // Main Context
 
+	/**
+	 * The {@link Application} for centralized data management and test control
+	 */
 	public TestApplication m_mainApp;
 	
 	/**
@@ -60,11 +68,13 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	CustomPagerAdapter mCustomPagerAdapter;
 
 	/**
-	 * The {@link ViewPager} that will display the three primary sections of the app, one at a
-	 * time.
+	 * The {@link ViewPager} that will display the three primary sections of the app, one at a time.
 	 */
 	ViewPager mViewPager;
 	
+	/**
+	 * Holder of the main tab/fragmen/section
+	 */
 	private TestSectionFragment mTestFragment;
 
 	@Override
@@ -124,9 +134,6 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 					.setText(mCustomPagerAdapter.getPageTitle(i))
 					.setTabListener(this));
 		}
-
-
-
 	}
 
 	@Override
@@ -200,26 +207,9 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 		super.finish();
 	}
 
-	/*
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		// Check which request we're responding to
-		if (requestCode == REQUEST_ENABLE_BT) {
-			// Bluetooth enable requested
-			switch (resultCode){
-			case RESULT_OK:
-				Log.v(TAG, "Jay! User enabled Bluetooth!");
-				this.spinnerBluetooth.setClickable(true);
-				break;
-			case RESULT_CANCELED:
-				Log.v(TAG, "User  did not enable Bluetooth");
-				this.spinnerBluetooth.setSelected(false);
-				this.spinnerBluetooth.setClickable(false);
-				break;
-			}
-		}
-	}
-	 */
+	
+
+	 
 
 
 

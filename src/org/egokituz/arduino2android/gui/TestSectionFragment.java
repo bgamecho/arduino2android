@@ -9,9 +9,13 @@ import java.util.Collections;
 import org.egokituz.arduino2android.R;
 import org.egokituz.arduino2android.TestApplication;
 
+import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,16 +29,35 @@ import android.widget.Spinner;
  */
 public class TestSectionFragment extends Fragment{
 
+	private static final String TAG = "TestSectionFragment";
+	
+	public static final int REQUEST_ENABLE_BT_RESULT = 1;
 
 	Spinner spinnerBluetooth;
 	ListView devicesListView;
+	
+	/**
+	 * Main context from the MainActivity
+	 */
 	private Context m_mainContext;
+	
+	/**
+	 * The main Application for centralized data management and test control
+	 */
 	private TestApplication m_mainApp;
 
+	/**
+	 * Constructor
+	 */
 	public TestSectionFragment() {
 		super();
 	}
 
+	/**
+	 * 
+	 * @param c The main context
+	 * @param app The main Application for centralized data management and test control
+	 */
 	public void setArguments(Context c, TestApplication app) {
 		m_mainContext = c;
 		m_mainApp = app;
@@ -44,27 +67,29 @@ public class TestSectionFragment extends Fragment{
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		// retain this fragment
+		
+		// retain this fragment (so that when the activity's state changes, 
+		// the configuration of this fragment is not lost
 		setRetainInstance(true);
 	}
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,	Bundle savedInstanceState) {
+		// Load the layout of this fragment
 		View rootView = inflater.inflate(R.layout.fragment_section_main_activity, container, false);
 
-
-		// Demonstration of a collection-browsing activity.
+		// Action of the "Begin test" button onClick event
 		rootView.findViewById(R.id.buttonBeginTest).setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				/*
-				Intent intent = new Intent(getActivity(), CollectionDemoActivity.class);
-				startActivity(intent);*/
+
+				requestBluetoothEnable();
+
 				m_mainApp.beginTest();
 			}
 		});
 
-		// Demonstration of navigating to external activities.
+		// Action of the "Refresh list" button onClick event
 		rootView.findViewById(R.id.buttonRefresh).setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
@@ -74,10 +99,54 @@ public class TestSectionFragment extends Fragment{
 
 		return rootView;
 	}
+	
+	private void requestBluetoothEnable() {
+		BluetoothAdapter _BluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+		
+		// Check if this device supports Bluetooth
+		if (_BluetoothAdapter == null) {
+			// TODO Device does not support Bluetooth
+			
+		};
+		
+		// If Bluetooth is not already enabled, prompt and ask the ser to enable it
+		if (!_BluetoothAdapter .isEnabled()){
+			Log.e(TAG, "Bluetooth disabled");
+			Log.v(TAG, "Asking for user permission to activate Bluetooth");
+			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+			//enableBtIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			//m_mainContext.startActivity(enableBtIntent); // Start a new activity to turn Bluetooth ON
+			
+			//((Activity) m_mainContext).startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT_RESULT);
+			startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT_RESULT);
+			//TODO implement onActivityResult in main Activity
+		}
+	}
 
-	//Updates the items of the Bluetooth devices' spinner
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		// Check which request we're responding to
+		if (requestCode == REQUEST_ENABLE_BT_RESULT) {
+			// Bluetooth enable requested
+			switch (resultCode){
+			case android.app.Activity.RESULT_OK :
+				Log.v(TAG, "Jay! User enabled Bluetooth!");
+				//this.spinnerBluetooth.setClickable(true);
+				break;
+			case android.app.Activity.RESULT_CANCELED:
+				Log.v(TAG, "User  did not enable Bluetooth");
+				//this.spinnerBluetooth.setSelected(false);
+				//this.spinnerBluetooth.setClickable(false);
+				break;
+			}
+		}
+		
+	}
+
+	/**
+	 * Updates the items of the Bluetooth devices' spinner
+	 */
 	public void updateSpinner(){
-		// TODO update spinned with running threads
 		try {
 			ArrayList<String> threads = new ArrayList<String>();
 			Collections.addAll(threads, m_mainApp.getBTManager().getConnectedArduinos());
@@ -86,7 +155,6 @@ public class TestSectionFragment extends Fragment{
 			Spinner devSpin = (Spinner)getView().findViewById(R.id.spinnerBluetooth);
 			devSpin.setAdapter(adapter);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
