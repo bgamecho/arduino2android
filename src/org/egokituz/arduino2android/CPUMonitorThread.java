@@ -22,8 +22,6 @@ package org.egokituz.arduino2android;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import org.egokituz.arduino2android.gui.MainActivity;
-
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
@@ -141,8 +139,7 @@ public class CPUMonitorThread extends Thread{
 			
 			if (pct>=0.0 && pct <=1.0) {
 				long timestamp = System.currentTimeMillis();
-				Message sendMsg = mainHandler.obtainMessage(
-						MainActivity.MESSAGE_CPU_USAGE, pct);
+				Message sendMsg = mainHandler.obtainMessage(TestApplication.MESSAGE_CPU_USAGE, pct);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putLong("TIMESTAMP", timestamp);
 				sendMsg.setData(myDataBundle);

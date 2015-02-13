@@ -19,8 +19,6 @@
  */
 package org.egokituz.arduino2android;
 
-import org.egokituz.arduino2android.gui.MainActivity;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -58,7 +56,7 @@ public class BatteryMonitorThread extends Thread{
 
 				long timestamp = System.currentTimeMillis();
 				
-				Message sendMsg = mainHandler.obtainMessage(MainActivity.MESSAGE_BATTERY_STATE_CHANGED,batteryPct);
+				Message sendMsg = mainHandler.obtainMessage(TestApplication.MESSAGE_BATTERY_STATE_CHANGED,batteryPct);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putLong("TIMESTAMP", timestamp);
 				sendMsg.setData(myDataBundle);

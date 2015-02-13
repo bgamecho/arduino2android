@@ -3,18 +3,15 @@
  */
 package org.egokituz.arduino2android.gui;
 
-import android.R;
+import android.app.AlertDialog.Builder;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.preference.DialogPreference;
 import android.util.AttributeSet;
-import android.widget.NumberPicker;
-import android.widget.RadioButton;
-
-import android.app.AlertDialog.Builder;
-import android.content.res.TypedArray;
 import android.view.Gravity;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.LinearLayout;
+import android.widget.NumberPicker;
 
 /**
  * @author Xabier Gardeazabal

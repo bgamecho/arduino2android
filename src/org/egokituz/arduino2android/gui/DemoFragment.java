@@ -1,8 +1,6 @@
 package org.egokituz.arduino2android.gui;
 
 import org.egokituz.arduino2android.R;
-import org.egokituz.arduino2android.R.id;
-import org.egokituz.arduino2android.R.layout;
 
 import android.os.Bundle;
 import android.support.v4.app.Fragment;

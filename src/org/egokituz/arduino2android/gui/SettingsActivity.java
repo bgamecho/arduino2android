@@ -10,8 +10,6 @@ import java.util.Map;
 
 import org.egokituz.arduino2android.BTManagerThread;
 import org.egokituz.arduino2android.R;
-import org.egokituz.arduino2android.R.string;
-import org.egokituz.arduino2android.R.xml;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -21,7 +19,6 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
-import android.widget.RadioGroup;
 
 /**
  * @author Xabier Gardeazabal

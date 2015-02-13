@@ -3,6 +3,8 @@
  */
 package org.egokituz.arduino2android.gui;
 
+import org.egokituz.arduino2android.TestApplication;
+
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -14,11 +16,18 @@ import android.support.v4.app.FragmentPagerAdapter;
  *
  */
 public class CustomPagerAdapter extends FragmentPagerAdapter{
-    protected Context mContext;
+    private Context mContext;
+	private TestApplication mMainApp;
+	
+	TestSectionFragment m_testFragment;
     
-    public CustomPagerAdapter(FragmentManager fm, Context context) {
+    public CustomPagerAdapter(FragmentManager fm, Context context, TestApplication app) {
         super(fm);
         mContext = context;
+        mMainApp = app;
+        
+        m_testFragment = new TestSectionFragment();
+		m_testFragment.setArguments(mContext, mMainApp);
     }
  
     @Override
@@ -26,13 +35,13 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
     // the specified position.
     //
     // It is called when the Adapter needs a fragment
-    // and it does not exists.
+    // and it does not exist.
     public Fragment getItem(int position) {
     	
 		switch (position) {
 		case 0:
 			// The first section of the app is the test activity
-			return new TestSectionFragment();
+			return m_testFragment;
 
 		default:
 	        // Create fragment object
@@ -49,9 +58,9 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
 	 
 	        return fragment;
 		}
- 
-
     }
+    
+    
  
     @Override
     public int getCount() {
@@ -61,6 +70,17 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
 
     @Override
     public CharSequence getPageTitle(int position) {
-        return "Section " + (position + 1);
+    	switch (position) {
+		case 0:
+			return "Test manager";
+
+		default:
+			return "Section " + (position + 1);
+		}
+        
     }
+
+	public void addItem(Fragment f, int i) {
+		m_testFragment = (TestSectionFragment) f;
+	}
 }

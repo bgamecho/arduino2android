@@ -25,9 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import org.egokituz.arduino2android.gui.MainActivity;
 import org.egokituz.arduino2android.gui.SettingsActivity;
 
 import android.app.Activity;
@@ -323,7 +321,7 @@ public class BTManagerThread extends Thread{
 
 				// Notify the main activity about the connection:
 				msg = timestamp+" "+deviceName+"-connected";
-				mainHandler.obtainMessage(MainActivity.MESSAGE_BT_EVENT, msg).sendToTarget();
+				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, msg).sendToTarget();
 
 				Log.v(TAG, "connection established with "+deviceName);
 				break;
@@ -345,7 +343,7 @@ public class BTManagerThread extends Thread{
 				// Notify the main activity about the disconnection:
 				timestamp = System.currentTimeMillis();
 				msg = timestamp+" "+deviceName+"-disconnected";
-				mainHandler.obtainMessage(MainActivity.MESSAGE_BT_EVENT, msg).sendToTarget();
+				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, msg).sendToTarget();
 
 				finalizeArduinoThread(device.getAddress());
 				devId = deviceName+"-"+device.getAddress();
@@ -358,7 +356,7 @@ public class BTManagerThread extends Thread{
 				Log.v(TAG, "discovery started");
 				timestamp = System.currentTimeMillis();
 				msg = timestamp+" "+"discovery-started";
-				mainHandler.obtainMessage(MainActivity.MESSAGE_BT_EVENT, msg).sendToTarget();
+				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, msg).sendToTarget();
 				break;
 
 			case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
@@ -366,7 +364,7 @@ public class BTManagerThread extends Thread{
 				Log.v(TAG, "discovery is finished");
 				timestamp = System.currentTimeMillis();
 				msg = timestamp+" "+"discovery-finished";
-				mainHandler.obtainMessage(MainActivity.MESSAGE_BT_EVENT, msg).sendToTarget();
+				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, msg).sendToTarget();
 
 				if(connectionTiming == DELAYED_CONNECT){
 					_plannerThread.fetchDevices();

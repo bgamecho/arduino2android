@@ -31,10 +31,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.CRC32;
-import java.util.zip.Checksum;
 
-import org.egokituz.arduino2android.gui.MainActivity;
 import org.egokituz.utils.ArduinoMessage;
 import org.egokituz.utils.BadMessageFrameFormat;
 
@@ -71,7 +68,7 @@ public class ArduinoThread extends Thread{
 	private BluetoothSocket _socket = null;
 	private InputStream _inStream = null;
 	private OutputStream _outStream = null;
-
+	
 	/**
 	 * New ArduinoThread that handles the connection with an Arduino with the provided MAC address
 	 * It writes and reads data to/from the connected socket of the device
@@ -359,7 +356,7 @@ public class ArduinoThread extends Thread{
 				
 				// Notify the main activity that a frame was dropped
 				String errorLine = timestamp+" "+devName;
-				mainHandler.obtainMessage(MainActivity.MESSAGE_ERROR_READING, errorLine).sendToTarget();
+				mainHandler.obtainMessage(TestApplication.MESSAGE_ERROR_READING, errorLine).sendToTarget();
 			} catch (IOException e) {
 				Log.e(TAG, "IOException reading socket for "+myBluetoothDevice.getName());
 				//e.printStackTrace();
@@ -406,14 +403,14 @@ public class ArduinoThread extends Thread{
 			msg +=" "+ping;
 			pingQueue.add(msg);
 			if(pingQueue.size()>99){
-				mainHandler.obtainMessage(MainActivity.MESSAGE_PING_READ, pingQueue.clone()).sendToTarget();
+				mainHandler.obtainMessage(TestApplication.MESSAGE_PING_READ, pingQueue.clone()).sendToTarget();
 				pingQueue.clear();
 			}
 			break;
 		case ArduinoMessage.MSGID_DATA:
 			dataQueue.add(msg);
 			if(dataQueue.size()>99){
-				mainHandler.obtainMessage(MainActivity.MESSAGE_DATA_READ, dataQueue.clone()).sendToTarget();
+				mainHandler.obtainMessage(TestApplication.MESSAGE_DATA_READ, dataQueue.clone()).sendToTarget();
 				dataQueue.clear();
 			}
 			break;
