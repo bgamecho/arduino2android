@@ -1,9 +1,11 @@
 /**
  * 
  */
-package org.egokituz.arduino2android.gui;
+package org.egokituz.arduino2android.adapters;
 
 import org.egokituz.arduino2android.TestApplication;
+import org.egokituz.arduino2android.fragments.DemoFragment;
+import org.egokituz.arduino2android.fragments.TestSectionFragment;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -17,17 +19,17 @@ import android.support.v4.app.FragmentPagerAdapter;
  */
 public class CustomPagerAdapter extends FragmentPagerAdapter{
     private Context mContext;
-	private TestApplication mMainApp;
+	private TestApplication m_MainApp;
 	
 	TestSectionFragment m_testFragment;
     
     public CustomPagerAdapter(FragmentManager fm, Context context, TestApplication app) {
         super(fm);
         mContext = context;
-        mMainApp = app;
+        m_MainApp = app;
         
         m_testFragment = new TestSectionFragment();
-		m_testFragment.setArguments(mContext, mMainApp);
+		m_testFragment.setArguments(mContext, m_MainApp);
     }
  
     @Override

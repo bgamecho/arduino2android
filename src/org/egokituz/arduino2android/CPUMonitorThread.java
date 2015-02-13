@@ -35,22 +35,22 @@ public class CPUMonitorThread extends Thread{
 	
 	private static final String TAG = "cpuMonitor";
 	
-	private Handler mainHandler;
-	private Context mainCtx;
+	private Handler m_mainAppHandler;
+	private Context m_AppContext;
 	
-	private boolean exit_condition = false;
+	private boolean m_exit_condition = false;
 	
 	public CPUMonitorThread(Context context, Handler handler){
 		this.setName(TAG);
 		//Log.v(TAG, "CPUMonitorThread Constructor start");
 		
-		mainHandler = handler;
-		mainCtx = context;
+		m_mainAppHandler = handler;
+		m_AppContext = context;
 
 	}
 	
-	private long idle1;
-	private long cpu1;
+	private long m_idle1;
+	private long m_cpu1;
 	
 	private void readFirstUsage() {
 	    try {
@@ -60,8 +60,8 @@ public class CPUMonitorThread extends Thread{
 	        
 	        String[] toks = load.split(" ");
 
-	        idle1 = Long.parseLong(toks[4]);
-	        cpu1 = Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[5])
+	        m_idle1 = Long.parseLong(toks[4]);
+	        m_cpu1 = Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[5])
 	              + Long.parseLong(toks[6]) + Long.parseLong(toks[7]) + Long.parseLong(toks[8]);
 	    }catch (IOException ex) {
 	        ex.printStackTrace();
@@ -81,10 +81,10 @@ public class CPUMonitorThread extends Thread{
 	        long cpu2 = Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[5])
 	            + Long.parseLong(toks[6]) + Long.parseLong(toks[7]) + Long.parseLong(toks[8]);
 
-	        float result = (float)(cpu2 - cpu1) / ((cpu2 + idle2) - (cpu1 + idle1));
+	        float result = (float)(cpu2 - m_cpu1) / ((cpu2 + idle2) - (m_cpu1 + m_idle1));
 
-	        idle1 = idle2;
-	        cpu1 = cpu2;
+	        m_idle1 = idle2;
+	        m_cpu1 = cpu2;
 	        return result;
 
 	    } catch (IOException ex) {
@@ -132,14 +132,14 @@ public class CPUMonitorThread extends Thread{
 	public void run() {
 		super.run();
 		readFirstUsage();
-		while(!exit_condition){
+		while(!m_exit_condition){
 			
 			Float pct = readUsage();
 			
 			
 			if (pct>=0.0 && pct <=1.0) {
 				long timestamp = System.currentTimeMillis();
-				Message sendMsg = mainHandler.obtainMessage(TestApplication.MESSAGE_CPU_USAGE, pct);
+				Message sendMsg = m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_CPU_USAGE, pct);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putLong("TIMESTAMP", timestamp);
 				sendMsg.setData(myDataBundle);
@@ -161,7 +161,7 @@ public class CPUMonitorThread extends Thread{
 	 * Stops the thread in a safe way
 	 */
 	public void finalize() {
-		exit_condition = true;
+		m_exit_condition = true;
 	}
 
 }

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.egokituz.arduino2android.gui;
+package org.egokituz.arduino2android.preferences;
 
 import org.egokituz.arduino2android.R;
 

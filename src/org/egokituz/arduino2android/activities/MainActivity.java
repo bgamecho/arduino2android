@@ -19,10 +19,12 @@
  */
 
 
-package org.egokituz.arduino2android.gui;
+package org.egokituz.arduino2android.activities;
 
 import org.egokituz.arduino2android.R;
 import org.egokituz.arduino2android.TestApplication;
+import org.egokituz.arduino2android.adapters.CustomPagerAdapter;
+import org.egokituz.arduino2android.fragments.TestSectionFragment;
 
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;
@@ -52,7 +54,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	/**
 	 * Main Context of the app
 	 */
-	Context m_context; // Main Context
+	Context m_ActivityContext; // Main Activity Context
 
 	/**
 	 * The {@link Application} for centralized data management and test control
@@ -65,7 +67,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	 * derivative, which will keep every loaded fragment in memory. If this becomes too memory
 	 * intensive, it may be best to switch to a {@link android.support.v4.app.FragmentStatePagerAdapter}.
 	 */
-	CustomPagerAdapter mCustomPagerAdapter;
+	CustomPagerAdapter m_CustomPagerAdapter;
 
 	/**
 	 * The {@link ViewPager} that will display the three primary sections of the app, one at a time.
@@ -75,29 +77,27 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	/**
 	 * Holder of the main tab/fragmen/section
 	 */
-	private TestSectionFragment mTestFragment;
+	private TestSectionFragment m_TestFragment;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		m_context = this;
-	    m_mainApp = (TestApplication)getApplication();
-	    m_mainApp.setContext(m_context);
-	    
+		m_ActivityContext = this;
+	    m_mainApp = (TestApplication)getApplication();	    
 	    
 		setContentView(R.layout.activity_main);
 		
 		// Create the adapter that will return a fragment for each of the three primary sections
 		// of the app.
-        mCustomPagerAdapter = new CustomPagerAdapter(getSupportFragmentManager(), m_context, m_mainApp);
+        m_CustomPagerAdapter = new CustomPagerAdapter(getSupportFragmentManager(), m_ActivityContext, m_mainApp);
         
         // find the retained fragment on activity restarts
-        mTestFragment = (TestSectionFragment) mCustomPagerAdapter.getItem(0);
+        m_TestFragment = (TestSectionFragment) m_CustomPagerAdapter.getItem(0);
 
-        if(mTestFragment == null){
-        	mTestFragment = new TestSectionFragment();
-        	mTestFragment.setArguments(m_context, m_mainApp);
-        	mCustomPagerAdapter.addItem(mTestFragment, 0);
+        if(m_TestFragment == null){
+        	m_TestFragment = new TestSectionFragment();
+        	m_TestFragment.setArguments(m_ActivityContext, m_mainApp);
+        	m_CustomPagerAdapter.addItem(m_TestFragment, 0);
         }
  
 		// Set up the action bar.
@@ -113,7 +113,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 		// Set up the ViewPager, attaching the adapter and setting up a listener for when the
 		// user swipes between sections.
         mViewPager = (ViewPager) findViewById(R.id.pager);
-        mViewPager.setAdapter(mCustomPagerAdapter);
+        mViewPager.setAdapter(m_CustomPagerAdapter);
 		mViewPager.setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
 			@Override
 			public void onPageSelected(int position) {
@@ -125,13 +125,13 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 		});
 
 		// For each of the sections in the app, add a tab to the action bar.
-		for (int i = 0; i < mCustomPagerAdapter.getCount(); i++) {
+		for (int i = 0; i < m_CustomPagerAdapter.getCount(); i++) {
 			// Create a tab with text corresponding to the page title defined by the adapter.
 			// Also specify this Activity object, which implements the TabListener interface, as the
 			// listener for when this tab is selected.
 			actionBar.addTab(
 					actionBar.newTab()
-					.setText(mCustomPagerAdapter.getPageTitle(i))
+					.setText(m_CustomPagerAdapter.getPageTitle(i))
 					.setTabListener(this));
 		}
 	}

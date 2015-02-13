@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.egokituz.arduino2android.gui;
+package org.egokituz.arduino2android.fragments;
 
 import java.util.ArrayList;
 import java.util.Collections;

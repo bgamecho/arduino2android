@@ -30,18 +30,22 @@ import android.os.Message;
 import android.util.Log;
 
 /**
+ * This module handles the monitorization of the battery level of the device. 
+ * Whenever the battery level changes, android broadcasts an Intent.ACTION_BATTERY_CHANGED intent.
+ * This class extracts the data and delivers it to the main application which in turn will deliver it to the logger module.
+ * 
  * @author Xabier Gardeazabal
  */
 public class BatteryMonitorThread extends Thread{
 	
 	private static final String TAG = "BatteryMonitor";
 	
-	private Handler mainHandler;
-	private Context mainCtx;
+	private Handler m_mainAppHandler;
+	private Context m_AppContext;
 	
-	private Intent batteryStatus;
+	private Intent m_batteryStatus;
 	
-	private boolean exit_condition = false;
+	private boolean m_exit_condition = false;
 	
 	private final BroadcastReceiver myReceiver = new BroadcastReceiver() {
 		public void onReceive(Context context, Intent intent) {
@@ -56,7 +60,7 @@ public class BatteryMonitorThread extends Thread{
 
 				long timestamp = System.currentTimeMillis();
 				
-				Message sendMsg = mainHandler.obtainMessage(TestApplication.MESSAGE_BATTERY_STATE_CHANGED,batteryPct);
+				Message sendMsg = m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_BATTERY_STATE_CHANGED,batteryPct);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putLong("TIMESTAMP", timestamp);
 				sendMsg.setData(myDataBundle);
@@ -68,23 +72,27 @@ public class BatteryMonitorThread extends Thread{
 		}
 	};
 
-	
+	/**
+	 * Constructor
+	 * @param context The context of the main application
+	 * @param handler
+	 */
 	public BatteryMonitorThread(Context context, Handler handler){
 		this.setName(TAG);
 		//Log.v(TAG, "BatteryMonitorThread Constructor start");
 		
-		mainHandler = handler;
-		mainCtx = context;
+		m_mainAppHandler = handler;
+		m_AppContext = context;
 		
 		IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-		batteryStatus = mainCtx.registerReceiver(myReceiver, ifilter);
+		m_batteryStatus = m_AppContext.registerReceiver(myReceiver, ifilter);
 	}
 
 	@Override
 	public void run() {
 		super.run();
 		
-		while(!exit_condition){
+		while(!m_exit_condition){
 			try {
 				Thread.sleep(999);
 			} catch (InterruptedException e) {
@@ -98,8 +106,8 @@ public class BatteryMonitorThread extends Thread{
 	 * Stops the thread in a safe way
 	 */
 	public void finalize() {
-		mainCtx.unregisterReceiver(myReceiver);
-		exit_condition = true;
+		m_AppContext.unregisterReceiver(myReceiver);
+		m_exit_condition = true;
 	}
 
 }

@@ -6,14 +6,12 @@ package org.egokituz.arduino2android;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.egokituz.arduino2android.gui.SettingsActivity;
-import org.egokituz.utils.ArduinoMessage;
+import org.egokituz.arduino2android.activities.SettingsActivity;
+import org.egokituz.arduino2android.models.ArduinoMessage;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
-import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
-import android.content.Intent;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
@@ -45,54 +43,42 @@ public class TestApplication extends Application {
 	private LoggerThread m_Logger_thread;
 	private CPUMonitorThread m_cpuMonitor_thread;
 
-	private ArrayList<String> m_testParameters = new ArrayList<>();
-
 	public boolean m_finishApp; // Flag for managing activity termination
 
-	private HashMap m_testPlanParameters; // Used to store current plan settings
+	private HashMap<String, Integer> m_testPlanParameters; // Used to store current plan settings
 
 
-	private Context m_context;
+	private Context m_AppContext;
 	
-	public TestApplication() {
-		/**
-		 * ##############################################
-		 */
-		// TODO CHECK IF THIS IS THE MAIN CONTEXT
-		m_context = getBaseContext();
-	}
-
-	public TestApplication(Context c) {
-		m_context = c; 
-	}
-
 	@Override
 	public void onCreate() {
 		// TODO Auto-generated method stub
 		super.onCreate();
 		
-		if(m_context == null)
-			m_context = getBaseContext();
-		
+		m_AppContext = getApplicationContext();
+
+		// set flags
 		m_finishApp = false;
 
-		if(!handlerThread.isAlive())
-			handlerThread.start();
+		// set handler
+		if(!m_handlerThread.isAlive())
+			m_handlerThread.start();
 		createHandler();
 
+		// Instantiate modules
 		try {
-			m_BTManager_thread = new BTManagerThread(m_context, arduinoHandler);
+			m_BTManager_thread = new BTManagerThread(m_AppContext, mainAppHandler);
+			Toast.makeText(m_AppContext, "BT manager started", Toast.LENGTH_SHORT).show();
 		} catch (Exception e) {
 			e.printStackTrace();
 
-			int duration = Toast.LENGTH_SHORT;
-			Toast toast = Toast.makeText(m_context, "Could not start the BT manager", duration);
-			toast.show();
+			// show a small message shortly (a Toast)
+			Toast.makeText(m_AppContext, "Could not start the BT manager", Toast.LENGTH_SHORT).show();
 		}
 
-		m_BatteryMonitor_thread = new BatteryMonitorThread(m_context, arduinoHandler);
-		m_cpuMonitor_thread = new CPUMonitorThread(m_context, arduinoHandler);
-		m_Logger_thread = new LoggerThread(m_context, arduinoHandler);
+		m_BatteryMonitor_thread = new BatteryMonitorThread(m_AppContext, mainAppHandler);
+		m_cpuMonitor_thread = new CPUMonitorThread(m_AppContext, mainAppHandler);
+		m_Logger_thread = new LoggerThread(m_AppContext, mainAppHandler);
 
 		// Start the logger thread
 		if(!m_Logger_thread.isAlive())
@@ -118,7 +104,7 @@ public class TestApplication extends Application {
 			m_cpuMonitor_thread.finalize();
 			m_Logger_thread.finalize();
 			//Shut down the HandlerThread
-			handlerThread.quit();
+			m_handlerThread.quit();
 		}
 		m_finishApp = true;
 	}
@@ -132,7 +118,7 @@ public class TestApplication extends Application {
 	 */
 	public void beginTest(){
 		// Retrieve the test parameters from the app's settings/preferences
-		m_testPlanParameters = (HashMap) SettingsActivity.getCurrentPreferences(m_context);
+		m_testPlanParameters = (HashMap<String, Integer>) SettingsActivity.getCurrentPreferences(m_AppContext);
 
 		// Tell the logger that a new Test has begun  //NOT ANYMORE: a new log folder may be created with the new parameters
 		m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_NEW_TEST, m_testPlanParameters).sendToTarget();
@@ -151,10 +137,10 @@ public class TestApplication extends Application {
 	/**
 	 * Handler connected with the BTManager Threads: 
 	 */
-	private HandlerThread handlerThread = new HandlerThread("MyHandlerThread");
-	public Handler arduinoHandler;
+	private HandlerThread m_handlerThread = new HandlerThread("MyHandlerThread");
+	public Handler mainAppHandler;
 	private void createHandler(){
-		arduinoHandler = new Handler(handlerThread.getLooper()) {
+		mainAppHandler = new Handler(m_handlerThread.getLooper()) {
 			String sendMsg;
 			byte[] readBuf;
 			int elapsedMilis;
@@ -233,7 +219,7 @@ public class TestApplication extends Application {
 					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_EVENT, event).sendToTarget();
 
 					int duration = Toast.LENGTH_SHORT;
-					Toast toast = Toast.makeText(m_context, event, duration);
+					Toast toast = Toast.makeText(m_AppContext, event, duration);
 					toast.show();
 					break;
 				}
@@ -269,7 +255,4 @@ public class TestApplication extends Application {
 		return m_cpuMonitor_thread;
 	}
 
-	public void setContext(Context c) {
-		m_context = c;
-	}
 }

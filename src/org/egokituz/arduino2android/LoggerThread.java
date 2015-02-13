@@ -30,7 +30,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.egokituz.arduino2android.gui.SettingsActivity;
+import org.egokituz.arduino2android.activities.SettingsActivity;
 
 import android.content.Context;
 import android.content.Intent;
@@ -57,7 +57,7 @@ public class LoggerThread extends Thread{
 	public static final int MESSAGE_EVENT = 5;
 	public static final int MESSAGE_NEW_TEST = 6;
 
-	private Context m_mainContext;
+	private Context m_AppContext;
 	private Handler m_mainHandler;
 
 	private boolean m_exitCondition = false;
@@ -122,12 +122,13 @@ public class LoggerThread extends Thread{
 
 	public LoggerThread(Context mainCtx, Handler mainHandler) {
 		super();
-		this.setName("loggerThread");
-		this.m_mainContext = mainCtx;
-		this.m_mainHandler = mainHandler;
+		setName("loggerThread");
+		
+		m_AppContext = mainCtx;
+		m_mainHandler = mainHandler;
 
-		if(!RootDir.exists())
-			RootDir.mkdirs();
+		if(!m_RootDir.exists())
+			m_RootDir.mkdirs();
 
 		createNextLogFolder();
 
@@ -139,15 +140,15 @@ public class LoggerThread extends Thread{
 	 */
 	private void createNextLogFolder() {
 		String folderName = "log1";
-		logFolder = new File(RootDir+ File.separator + folderName);
+		m_logFolder = new File(m_RootDir+ File.separator + folderName);
 
 		int i = 1;
-		while(logFolder.isDirectory()){
+		while(m_logFolder.isDirectory()){
 			i++;
 			folderName = "log"+i;
-			logFolder = new File(RootDir + File.separator + folderName);
+			m_logFolder = new File(m_RootDir + File.separator + folderName);
 		}
-		logFolder.mkdir();
+		m_logFolder.mkdir();
 	}
 
 	@Override
@@ -165,20 +166,20 @@ public class LoggerThread extends Thread{
 	}
 
 	// Externalize variables for performance
-	private final File RootDir = new File(Environment.getExternalStorageDirectory() + File.separator + "logs");
-	private File logFolder;
-	private File logFile;
-	private BufferedWriter buf;
-	private FileWriter fw;
+	private final File m_RootDir = new File(Environment.getExternalStorageDirectory() + File.separator + "logs");
+	private File m_logFolder;
+	private File m_logFile;
+	private BufferedWriter m_buf;
+	private FileWriter m_fw;
 
 	public void appendLog(String fileName, ArrayList<String> text){
 		//Log.v(TAG, text);
-		if(logFolder.canWrite()){
+		if(m_logFolder.canWrite()){
 			//String filePath = mainCtx.getFilesDir().getPath().toString() + "/logXabi.txt";
-			logFile = new File(logFolder,fileName);
-			if (!logFile.exists()){
+			m_logFile = new File(m_logFolder,fileName);
+			if (!m_logFile.exists()){
 				try{
-					logFile.createNewFile();
+					m_logFile.createNewFile();
 				} 
 				catch (IOException e){
 					// TODO Auto-generated catch block
@@ -187,13 +188,13 @@ public class LoggerThread extends Thread{
 			}
 			try{
 				//BufferedWriter for performance, true to set append to file flag
-				fw = new FileWriter(logFile, true);
-				buf = new BufferedWriter(fw);
+				m_fw = new FileWriter(m_logFile, true);
+				m_buf = new BufferedWriter(m_fw);
 				for (String line : text) {
-					buf.append(line);
-					buf.newLine();
+					m_buf.append(line);
+					m_buf.newLine();
 				}
-				buf.close();
+				m_buf.close();
 			}
 			catch (IOException e){
 				// TODO Auto-generated catch block
@@ -233,7 +234,7 @@ public class LoggerThread extends Thread{
 			i.putExtra(Intent.EXTRA_SUBJECT,"android - email with attachment");
 			i.putExtra(Intent.EXTRA_TEXT,"");
 			i.putExtra(Intent.EXTRA_STREAM, uri);
-			m_mainContext.startActivity(Intent.createChooser(i, "Select application"));
+			m_AppContext.startActivity(Intent.createChooser(i, "Select application"));
 		} 
 		catch (UnsupportedEncodingException e) 
 		{
