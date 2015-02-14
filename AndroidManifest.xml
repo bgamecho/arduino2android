@@ -35,7 +35,7 @@
            <!--  android:parentActivi="torg.egokituz.arduino2android.activities.MainActivity" > -->
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="org.egokituz.arduino2android.gui.MainActivity" />
+                android:value="org.egokituz.arduino2android.activities.MainActivity" />
         </activity>
     </application>
 

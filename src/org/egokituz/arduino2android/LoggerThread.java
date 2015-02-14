@@ -49,6 +49,7 @@ public class LoggerThread extends Thread{
 
 	private static final String TAG = "Logger";
 
+	// Handler message types
 	public static final int MESSAGE_WRITE_DATA = 0;
 	public static final int MESSAGE_WRITE_BATTERY = 1;
 	public static final int MESSAGE_CPU = 2;
@@ -56,6 +57,15 @@ public class LoggerThread extends Thread{
 	public static final int MESSAGE_ERROR = 4;
 	public static final int MESSAGE_EVENT = 5;
 	public static final int MESSAGE_NEW_TEST = 6;
+	
+	// Filenames
+	private final String FILE_PING = "ping.txt";
+	private final String FILE_DATA = "data.txt";
+	private final String FILE_BATTERY = "battery.txt";
+	private final String FILE_CPU = "cpu.txt";
+	private final String FILE_ERROR = "error.txt";
+	private final String FILE_EVENTS = "events.txt";
+	private final String FILE_PARAMETERS = "testParameters.txt";
 
 	private Context m_AppContext;
 	private Handler m_mainHandler;
@@ -74,45 +84,46 @@ public class LoggerThread extends Thread{
 			switch (msg.what) {
 			case MESSAGE_PING:
 				textQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone(); //clone() or otherwise concurrent modification exception
-				appendLog("ping.txt",textQueue);
+				appendLog(FILE_PING,textQueue);
 				break;
 			case MESSAGE_WRITE_DATA:
 				textQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone();  //clone() or otherwise concurrent modification exception
-				appendLog("data.txt",textQueue);	
+				appendLog(FILE_DATA,textQueue);	
 
 				break;
 			case MESSAGE_WRITE_BATTERY:
 				text = (String) msg.obj;
 				textQueue = new ArrayList<String>();
 				textQueue.add(text);
-				appendLog("battery.txt",textQueue);
+				appendLog(FILE_BATTERY,textQueue);
 				break;
 			case MESSAGE_CPU:
 				text = (String) msg.obj;
 				textQueue = new ArrayList<String>();
 				textQueue.add(text);
-				appendLog("cpu.txt",textQueue);
+				appendLog(FILE_CPU,textQueue);
 				break;
 			case MESSAGE_ERROR:
 				text = (String) msg.obj;
 				textQueue = new ArrayList<String>();
 				textQueue.add(text);
-				appendLog("error.txt",textQueue);
+				appendLog(FILE_ERROR,textQueue);
 				break;
 			case MESSAGE_EVENT:
 				text = (String) msg.obj;
 				textQueue = new ArrayList<String>();
 				textQueue.add(text);
-				appendLog("events.txt",textQueue);
+				appendLog(FILE_EVENTS,textQueue);
 				break;
 			case MESSAGE_NEW_TEST:
 				if(m_testInProcess)
 					createNextLogFolder();
+				
 				HashMap<String, Integer> preferences = (HashMap<String, Integer>) msg.obj;
 				
 				ArrayList<String> parametersQueue = (ArrayList<String>) SettingsActivity.preferenceListToString(preferences);
 				parametersQueue.add(0, getDeviceName());
-				appendLog("testParameters.txt",parametersQueue);
+				appendLog(FILE_PARAMETERS,parametersQueue);
 				m_testInProcess = true;
 				break;
 			}

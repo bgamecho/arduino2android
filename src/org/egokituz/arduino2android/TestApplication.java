@@ -7,7 +7,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.egokituz.arduino2android.activities.SettingsActivity;
+import org.egokituz.arduino2android.fragments.ChartFragment;
 import org.egokituz.arduino2android.models.ArduinoMessage;
+import org.egokituz.arduino2android.models.CPUData;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
@@ -47,6 +49,7 @@ public class TestApplication extends Application {
 
 	private HashMap<String, Integer> m_testPlanParameters; // Used to store current plan settings
 
+	private Handler m_dataListener;
 
 	private Context m_AppContext;
 	
@@ -68,7 +71,7 @@ public class TestApplication extends Application {
 		// Instantiate modules
 		try {
 			m_BTManager_thread = new BTManagerThread(m_AppContext, mainAppHandler);
-			Toast.makeText(m_AppContext, "BT manager started", Toast.LENGTH_SHORT).show();
+			//Toast.makeText(m_AppContext, "BT manager started", Toast.LENGTH_SHORT).show();
 		} catch (Exception e) {
 			e.printStackTrace();
 
@@ -139,6 +142,9 @@ public class TestApplication extends Application {
 	 */
 	private HandlerThread m_handlerThread = new HandlerThread("MyHandlerThread");
 	public Handler mainAppHandler;
+
+
+
 	private void createHandler(){
 		mainAppHandler = new Handler(m_handlerThread.getLooper()) {
 			String sendMsg;
@@ -195,6 +201,11 @@ public class TestApplication extends Application {
 					// call the Logger to write the battery load
 					sendMsg = timestamp+" "+cpu;
 					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_CPU, sendMsg).sendToTarget();
+					
+					
+					// send data to the ChartFragment 
+					CPUData data = new CPUData(timestamp, cpu);
+					m_dataListener.obtainMessage(ChartFragment.DATA_CPU, data).sendToTarget();
 
 					break;
 
@@ -253,6 +264,10 @@ public class TestApplication extends Application {
 	 */
 	public CPUMonitorThread getCPUMonitor() {
 		return m_cpuMonitor_thread;
+	}
+	
+	public void registerTestDataListener(Handler h){
+		m_dataListener = h;
 	}
 
 }

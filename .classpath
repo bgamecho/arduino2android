@@ -5,7 +5,7 @@
 	<classpathentry exported="true" kind="con" path="com.android.ide.eclipse.adt.DEPENDENCIES"/>
 	<classpathentry kind="lib" path="C:/android/sdk/platforms/android-20/android.jar"/>
 	<classpathentry kind="lib" path="libs/mpandroidchartlibrary-1-7-4.jar"/>
-	<classpathentry kind="lib" path="C:/android/sdk/extras/android/support/v4/android-support-v4.jar"/>
+	<classpathentry kind="lib" path="C:/android/sdk/extras/android/support/v4/android-support-v4.jar" sourcepath="C:/android/sdk/extras/android/support/v4/src"/>
 	<classpathentry kind="src" path="gen"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="output" path="bin/classes"/>
