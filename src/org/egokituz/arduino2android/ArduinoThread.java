@@ -411,6 +411,7 @@ public class ArduinoThread extends Thread{
 				m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_PING_READ, pingQueue.clone()).sendToTarget();
 				pingQueue.clear();
 			}
+			
 			break;
 		case ArduinoMessage.MSGID_DATA:
 			dataQueue.add(msg);

@@ -7,17 +7,19 @@ package org.egokituz.arduino2android.models;
  * @author Xabier Gardeazabal
  *
  */
-public class CPUData extends TestData {
+public class PingData extends TestData {
 	
-	public Float cpuLoad; 
+	public Float pingTime;
+	public String arduinoID;
 	
-	public CPUData() {
-		
-	}
-	
-	public CPUData(long time, Float load ){
+
+	/**
+	 * 
+	 */
+	public PingData(long time, Float ping, String id) {
 		timestamp = time;
-		cpuLoad = load*100; // normalize to a percentage range 0-100
+		pingTime = ping;
+		arduinoID = id;
 	}
 
 	/* (non-Javadoc)

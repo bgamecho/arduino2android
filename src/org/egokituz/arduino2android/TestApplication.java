@@ -9,6 +9,7 @@ import java.util.HashMap;
 import org.egokituz.arduino2android.activities.SettingsActivity;
 import org.egokituz.arduino2android.fragments.ChartFragment;
 import org.egokituz.arduino2android.models.ArduinoMessage;
+import org.egokituz.arduino2android.models.BatteryData;
 import org.egokituz.arduino2android.models.CPUData;
 
 import android.annotation.SuppressLint;
@@ -168,6 +169,7 @@ public class TestApplication extends Application {
 					ArrayList<String> pingQueue = (ArrayList<String>) msg.obj;
 					// write to log file
 					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_PING, pingQueue).sendToTarget();
+					
 					break;
 
 				case MESSAGE_DATA_READ:
@@ -188,6 +190,9 @@ public class TestApplication extends Application {
 					// call the Logger to write the battery load
 					sendMsg = timestamp+" "+batteryLoad;
 					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, sendMsg).sendToTarget();
+					
+					BatteryData battery = new BatteryData(timestamp, batteryLoad);
+					m_dataListener.obtainMessage(ChartFragment.DATA_BATTERY, battery).sendToTarget();
 
 					break;
 

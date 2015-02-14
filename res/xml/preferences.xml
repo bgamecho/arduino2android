@@ -50,7 +50,7 @@
 	        android:defaultValue="on"
 	        android:dependency="pref_performanceMode"/>
 	    
- 	    <org.egokituz.arduino2android.gui.SeekbarPreference
+ 	    <org.egokituz.arduino2android.preferences.SeekbarPreference
 	        android:key="pref_balance"
         	android:title="@string/pref_discoveryInterval" />
 	</PreferenceCategory>

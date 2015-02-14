@@ -7,6 +7,7 @@ import java.util.ArrayList;
 
 import org.egokituz.arduino2android.R;
 import org.egokituz.arduino2android.TestApplication;
+import org.egokituz.arduino2android.models.BatteryData;
 import org.egokituz.arduino2android.models.CPUData;
 
 import com.github.mikephil.charting.charts.LineChart;
@@ -46,11 +47,11 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 	public static final int DATA_EVENT = 5;
 
 	// Chart data-set index
-	private final int DATASET_BATTERY = 0;
-	private final int DATASET_CPU = 1;
-	private final int DATASET_PING = 2;
-	private final int DATASET_ERROR = 3;
-	private final int DATASET_EVENT = 4;
+	private static final int DATASET_BATTERY = 0;
+	private static final int DATASET_CPU = 1;
+	private static final int DATASET_PING = 2;
+	private static final int DATASET_ERROR = 3;
+	private static final int DATASET_EVENT = 4;
 
 	// Chart data
 	private LineDataSet m_cpuDataSet;
@@ -74,14 +75,19 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 
 		@Override
 		public void handleMessage(Message msg) {
+			Entry e;
 			switch (msg.what) {
 			case DATA_BATTERY:
-
+				BatteryData battery = (BatteryData) msg.obj;
+				e = new Entry(battery.batteryLevel, m_batteryDataSet.getEntryCount());
+				//addEntry(DATASET_BATTERY, e);
+				addEntry2(DATASET_BATTERY, e);
 				break;
 			case DATA_CPU:
 				CPUData cpu = (CPUData) msg.obj;
-				Entry e = new Entry(cpu.cpuLoad, m_cpuDataSet.getEntryCount());
-				addEntry(DATASET_CPU, e);
+				e = new Entry(cpu.cpuLoad, m_cpuDataSet.getEntryCount());
+				//addEntry(DATASET_CPU, e);
+				addEntry2(DATASET_CPU, e);
 				break;
 			case DATA_PING:
 
@@ -138,6 +144,7 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		mChart.setDrawYValues(false);
 		mChart.setDrawGridBackground(false);
 		mChart.setDescription("");
+		mChart.setYRange(0, 100, false);
 
 		createDataSets();
 		
@@ -155,7 +162,6 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 
 		return rootView;
 	}
-
 
 	private void addEntry(int dsIndex, Entry e) {
 
@@ -175,6 +181,26 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 			// redraw the chart
 			mChart.invalidate();   
 		}
+	}
+
+	private void addEntry2(int dsIndex, Entry e) {
+		switch (dsIndex) {
+		case DATASET_BATTERY:
+			m_batteryDataSet.addEntry(e);
+			break;
+
+		case DATASET_CPU:
+			m_cpuDataSet.addEntry(e);
+			break;
+		default:
+			break;
+		}
+		
+		// let the chart know it's data has changed
+		mChart.notifyDataSetChanged();
+
+		// redraw the chart
+		mChart.invalidate();
 	}
 
 	private void createDataSets() {
@@ -200,7 +226,7 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 
 		// create a chartdata object that contains only the x-axis labels (no entries or datasets)
 		LineData data = new LineData(xVals);
-		
+
 		// Add datasets. WARNING: the order of addition matters!!!
 		data.addDataSet(m_batteryDataSet);
 		data.addDataSet(m_cpuDataSet);

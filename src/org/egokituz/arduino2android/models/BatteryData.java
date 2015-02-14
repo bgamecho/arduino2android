@@ -7,17 +7,16 @@ package org.egokituz.arduino2android.models;
  * @author Xabier Gardeazabal
  *
  */
-public class CPUData extends TestData {
+public class BatteryData extends TestData {
+
+	public Float batteryLevel;
 	
-	public Float cpuLoad; 
-	
-	public CPUData() {
-		
-	}
-	
-	public CPUData(long time, Float load ){
+	/**
+	 * 
+	 */
+	public BatteryData(long time, Float battery) {
 		timestamp = time;
-		cpuLoad = load*100; // normalize to a percentage range 0-100
+		batteryLevel = battery;
 	}
 
 	/* (non-Javadoc)
@@ -25,7 +24,6 @@ public class CPUData extends TestData {
 	 */
 	@Override
 	public String toString() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
