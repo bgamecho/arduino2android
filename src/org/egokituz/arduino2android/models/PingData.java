@@ -9,15 +9,17 @@ package org.egokituz.arduino2android.models;
  */
 public class PingData extends TestData {
 	
-	public Float pingTime;
+	public long pingTime;
 	public String arduinoID;
+	public int msgSize; 
 	
 
 	/**
 	 * 
 	 */
-	public PingData(long time, Float ping, String id) {
+	public PingData(long time, int size, long ping, String id) {
 		timestamp = time;
+		msgSize = size;
 		pingTime = ping;
 		arduinoID = id;
 	}
@@ -27,8 +29,7 @@ public class PingData extends TestData {
 	 */
 	@Override
 	public String toString() {
-		// TODO Auto-generated method stub
-		return null;
+		return timestamp+" "+arduinoID+" "+msgSize+" "+pingTime;
 	}
 
 }

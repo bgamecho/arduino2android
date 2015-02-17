@@ -6,6 +6,7 @@ package org.egokituz.arduino2android.adapters;
 import org.egokituz.arduino2android.TestApplication;
 import org.egokituz.arduino2android.fragments.ChartFragment;
 import org.egokituz.arduino2android.fragments.DemoFragment;
+import org.egokituz.arduino2android.fragments.StatisticsFragment;
 import org.egokituz.arduino2android.fragments.TestSectionFragment;
 
 import android.content.Context;
@@ -24,6 +25,7 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
 	
 	private TestSectionFragment m_testFragment;
 	private ChartFragment m_chart;
+	private StatisticsFragment m_statistics;
     
     public CustomPagerAdapter(FragmentManager fm, Context context, TestApplication app) {
         super(fm);
@@ -35,6 +37,9 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
 		
 		m_chart = new ChartFragment();
 		m_chart.setArguments(mContext, m_MainApp);
+		
+		m_statistics = new StatisticsFragment();
+		m_statistics.setArguments(mContext, m_MainApp);
     }
  
     @Override
@@ -52,6 +57,8 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
 		case 1:
 			return m_chart;
 
+		case 2:
+			return m_statistics;
 		default:
 	        // Create fragment object
 	        Fragment fragment = new DemoFragment();
@@ -84,6 +91,8 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
 			return "Test manager";
 		case 1:
 			return "Line Chart";
+		case 2:
+			return "Statistics";
 		default:
 			return "Section " + (position + 1);
 		}

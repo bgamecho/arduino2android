@@ -7,17 +7,13 @@ package org.egokituz.arduino2android.models;
  * @author Xabier Gardeazabal
  *
  */
-public class BatteryData extends TestData {
+public class TestError extends TestData {
 
-	
-	public float batteryLevel;
-	
 	/**
 	 * 
 	 */
-	public BatteryData(long time, Float battery) {
-		timestamp = time;
-		batteryLevel = battery;
+	public TestError() {
+		// TODO Auto-generated constructor stub
 	}
 
 	/* (non-Javadoc)
@@ -25,7 +21,7 @@ public class BatteryData extends TestData {
 	 */
 	@Override
 	public String toString() {
-		return timestamp+" "+batteryLevel;
+		return timestamp+" "+source;
 	}
 
 }

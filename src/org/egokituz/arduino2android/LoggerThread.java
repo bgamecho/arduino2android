@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.egokituz.arduino2android.activities.SettingsActivity;
+import org.egokituz.arduino2android.models.TestData;
 
 import android.content.Context;
 import android.content.Intent;
@@ -50,13 +51,13 @@ public class LoggerThread extends Thread{
 	private static final String TAG = "Logger";
 
 	// Handler message types
-	public static final int MESSAGE_WRITE_DATA = 0;
-	public static final int MESSAGE_WRITE_BATTERY = 1;
-	public static final int MESSAGE_CPU = 2;
-	public static final int MESSAGE_PING = 3;
-	public static final int MESSAGE_ERROR = 4;
-	public static final int MESSAGE_EVENT = 5;
-	public static final int MESSAGE_NEW_TEST = 6;
+//	public static final int MESSAGE_WRITE_DATA = 0;
+//	public static final int MESSAGE_WRITE_BATTERY = 1;
+//	public static final int MESSAGE_CPU = 2;
+//	public static final int MESSAGE_PING = 3;
+//	public static final int MESSAGE_ERROR = 4;
+//	public static final int MESSAGE_EVENT = 5;
+	public static final int MESSAGE_NEW_TEST = 7;
 	
 	// Filenames
 	private final String FILE_PING = "ping.txt";
@@ -74,7 +75,7 @@ public class LoggerThread extends Thread{
 
 	private boolean m_testInProcess = false;
 
-	public Handler m_logHandler = new Handler(){
+	public Handler loggerThreadHandler = new Handler(){
 
 		@SuppressWarnings("unchecked")
 		@Override
@@ -82,35 +83,34 @@ public class LoggerThread extends Thread{
 			ArrayList<String> textQueue;
 			String text;
 			switch (msg.what) {
-			case MESSAGE_PING:
-				textQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone(); //clone() or otherwise concurrent modification exception
+			case TestData.DATA_PING:
+				textQueue = TestData.toStringList((ArrayList<TestData>) ((ArrayList<TestData>) msg.obj).clone()); //clone() or otherwise concurrent modification exception
 				appendLog(FILE_PING,textQueue);
 				break;
-			case MESSAGE_WRITE_DATA:
-				textQueue = (ArrayList<String>) ((ArrayList<String>) msg.obj).clone();  //clone() or otherwise concurrent modification exception
-				appendLog(FILE_DATA,textQueue);	
-
+			case TestData.DATA_STRESS:
+				textQueue = TestData.toStringList((ArrayList<TestData>) ((ArrayList<TestData>) msg.obj).clone());
+				appendLog(FILE_DATA,textQueue);
 				break;
-			case MESSAGE_WRITE_BATTERY:
-				text = (String) msg.obj;
+			case TestData.DATA_BATTERY:
+				text = ((TestData) msg.obj).toString();
 				textQueue = new ArrayList<String>();
 				textQueue.add(text);
 				appendLog(FILE_BATTERY,textQueue);
 				break;
-			case MESSAGE_CPU:
-				text = (String) msg.obj;
+			case TestData.DATA_CPU:
+				text = ((TestData) msg.obj).toString();
 				textQueue = new ArrayList<String>();
 				textQueue.add(text);
 				appendLog(FILE_CPU,textQueue);
 				break;
-			case MESSAGE_ERROR:
-				text = (String) msg.obj;
+			case TestData.DATA_ERROR:
+				text = ((TestData) msg.obj).toString();
 				textQueue = new ArrayList<String>();
 				textQueue.add(text);
 				appendLog(FILE_ERROR,textQueue);
 				break;
-			case MESSAGE_EVENT:
-				text = (String) msg.obj;
+			case TestData.DATA_EVENT:
+				text = ((TestData) msg.obj).toString();
 				textQueue = new ArrayList<String>();
 				textQueue.add(text);
 				appendLog(FILE_EVENTS,textQueue);
@@ -142,7 +142,6 @@ public class LoggerThread extends Thread{
 			m_RootDir.mkdirs();
 
 		createNextLogFolder();
-
 
 	}
 

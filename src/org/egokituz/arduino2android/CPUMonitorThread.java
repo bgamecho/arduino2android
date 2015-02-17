@@ -22,10 +22,10 @@ package org.egokituz.arduino2android;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+import org.egokituz.arduino2android.models.CPUData;
+
 import android.content.Context;
-import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 
 /**
@@ -139,14 +139,19 @@ public class CPUMonitorThread extends Thread{
 			
 			if (pct>=0.0 && pct <=1.0) {
 				long timestamp = System.currentTimeMillis();
+				CPUData cpu = new CPUData(timestamp, pct);
+				 m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_CPU_USAGE, cpu).sendToTarget();
+				 
+				/*
 				Message sendMsg = m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_CPU_USAGE, pct);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putLong("TIMESTAMP", timestamp);
 				sendMsg.setData(myDataBundle);
 				sendMsg.sendToTarget();
+				*/
 			}
 			
-			Log.v(TAG, "CPU load changed: "+pct);
+			//Log.v(TAG, "CPU load changed: "+pct);
 			
 			try {
 				Thread.sleep(999);

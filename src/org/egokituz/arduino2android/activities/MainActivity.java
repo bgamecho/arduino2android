@@ -24,13 +24,11 @@ package org.egokituz.arduino2android.activities;
 import org.egokituz.arduino2android.R;
 import org.egokituz.arduino2android.TestApplication;
 import org.egokituz.arduino2android.adapters.CustomPagerAdapter;
-import org.egokituz.arduino2android.fragments.TestSectionFragment;
 
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;
 import android.app.Application;
 import android.app.FragmentTransaction;
-import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -77,7 +75,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	/**
 	 * Holder of the main tab/fragmen/section
 	 */
-	private TestSectionFragment m_TestFragment;
+	//private TestSectionFragment m_TestFragment;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -91,6 +89,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 		// of the app.
         m_CustomPagerAdapter = new CustomPagerAdapter(getSupportFragmentManager(), m_ActivityContext, m_mainApp);
         
+        /*
         // find the retained fragment on activity restarts
         m_TestFragment = (TestSectionFragment) m_CustomPagerAdapter.getItem(0);
 
@@ -98,7 +97,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
         	m_TestFragment = new TestSectionFragment();
         	m_TestFragment.setArguments(m_ActivityContext, m_mainApp);
         	m_CustomPagerAdapter.addItem(m_TestFragment, 0);
-        }
+        }*/
  
 		// Set up the action bar.
 		final ActionBar actionBar = getActionBar();

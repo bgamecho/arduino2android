@@ -7,10 +7,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.egokituz.arduino2android.activities.SettingsActivity;
-import org.egokituz.arduino2android.fragments.ChartFragment;
 import org.egokituz.arduino2android.models.ArduinoMessage;
 import org.egokituz.arduino2android.models.BatteryData;
 import org.egokituz.arduino2android.models.CPUData;
+import org.egokituz.arduino2android.models.TestData;
+import org.egokituz.arduino2android.models.TestError;
+import org.egokituz.arduino2android.models.TestEvent;
+import org.egokituz.arduino2android.models.TestStatistics;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
@@ -45,12 +48,14 @@ public class TestApplication extends Application {
 	private BatteryMonitorThread m_BatteryMonitor_thread;
 	private LoggerThread m_Logger_thread;
 	private CPUMonitorThread m_cpuMonitor_thread;
-
+	public StatisticsThread m_statistics_thread;
+	
 	public boolean m_finishApp; // Flag for managing activity termination
 
 	private HashMap<String, Integer> m_testPlanParameters; // Used to store current plan settings
 
-	private Handler m_dataListener;
+
+	private ArrayList<Handler> m_dataListeners;
 
 	private Context m_AppContext;
 	
@@ -83,6 +88,7 @@ public class TestApplication extends Application {
 		m_BatteryMonitor_thread = new BatteryMonitorThread(m_AppContext, mainAppHandler);
 		m_cpuMonitor_thread = new CPUMonitorThread(m_AppContext, mainAppHandler);
 		m_Logger_thread = new LoggerThread(m_AppContext, mainAppHandler);
+		m_statistics_thread = new StatisticsThread(m_AppContext, mainAppHandler);
 
 		// Start the logger thread
 		if(!m_Logger_thread.isAlive())
@@ -93,6 +99,12 @@ public class TestApplication extends Application {
 			m_BatteryMonitor_thread.start();
 		if(!m_cpuMonitor_thread.isAlive())
 			m_cpuMonitor_thread.start();
+		if(!m_statistics_thread.isAlive())
+			m_statistics_thread.start();
+		
+		m_dataListeners = new ArrayList<Handler>();
+		registerTestDataListener(m_Logger_thread.loggerThreadHandler);
+		registerTestDataListener(m_statistics_thread.statisticsThreadHandler);
 	}
 	
 	
@@ -125,7 +137,7 @@ public class TestApplication extends Application {
 		m_testPlanParameters = (HashMap<String, Integer>) SettingsActivity.getCurrentPreferences(m_AppContext);
 
 		// Tell the logger that a new Test has begun  //NOT ANYMORE: a new log folder may be created with the new parameters
-		m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_NEW_TEST, m_testPlanParameters).sendToTarget();
+		m_Logger_thread.loggerThreadHandler.obtainMessage(LoggerThread.MESSAGE_NEW_TEST, m_testPlanParameters).sendToTarget();
 
 		//TODO: send the test parameters to the BluetoothManager-thread
 		// Set the Bluetooth Manager's plan with the selected parameters
@@ -166,9 +178,12 @@ public class TestApplication extends Application {
 					// Message received from a running Arduino Thread
 					// This message implies that 99 well formed PING messages were read by an Arduino Thread
 
-					ArrayList<String> pingQueue = (ArrayList<String>) msg.obj;
+					ArrayList<TestData> pingQueue = (ArrayList<TestData>) msg.obj;
+					
+					communicateToDataListeners(TestData.DATA_PING, pingQueue);
+					
 					// write to log file
-					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_PING, pingQueue).sendToTarget();
+					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_PING, pingQueue).sendToTarget();
 					
 					break;
 
@@ -176,23 +191,29 @@ public class TestApplication extends Application {
 					// Message received from a running Arduino Thread
 					// This message implies that 99 well formed DATA messages were read by an Arduino Thread
 
-					ArrayList<String> dataQueue = (ArrayList<String>) msg.obj;
-					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_DATA, dataQueue).sendToTarget();
+					ArrayList<TestData> dataQueue = (ArrayList<TestData>) msg.obj;
+					communicateToDataListeners(TestData.DATA_STRESS, dataQueue);
+					
+					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_DATA, dataQueue).sendToTarget();
 					break;
 
 				case MESSAGE_BATTERY_STATE_CHANGED:
 					// Message received from the Battery-Monitor Thread
 					// This message implies that the Battery percentage has changed
 
+					/*
 					Float batteryLoad = (Float) msg.obj;
 					timestamp = msg.getData().getLong("TIMESTAMP");
 
 					// call the Logger to write the battery load
 					sendMsg = timestamp+" "+batteryLoad;
 					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, sendMsg).sendToTarget();
+					*/
 					
-					BatteryData battery = new BatteryData(timestamp, batteryLoad);
-					m_dataListener.obtainMessage(ChartFragment.DATA_BATTERY, battery).sendToTarget();
+					BatteryData battery = (BatteryData) msg.obj;
+					communicateToDataListeners(TestData.DATA_BATTERY, battery);
+					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, battery).sendToTarget();
+					//m_dataListener.obtainMessage(TestData.DATA_BATTERY, battery).sendToTarget();
 
 					break;
 
@@ -200,17 +221,20 @@ public class TestApplication extends Application {
 					// Message received from a running Arduino Thread
 					// This message implies that a malformed message has been read by an Arduino Thread
 
+					/*
 					Float cpu = (Float) msg.obj;
 					timestamp = msg.getData().getLong("TIMESTAMP");
 
 					// call the Logger to write the battery load
 					sendMsg = timestamp+" "+cpu;
 					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_CPU, sendMsg).sendToTarget();
-					
+					*/
 					
 					// send data to the ChartFragment 
-					CPUData data = new CPUData(timestamp, cpu);
-					m_dataListener.obtainMessage(ChartFragment.DATA_CPU, data).sendToTarget();
+					CPUData cpu = (CPUData) msg.obj;
+					communicateToDataListeners(TestData.DATA_CPU, cpu);
+					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_CPU, data).sendToTarget();
+					//m_dataListener.obtainMessage(TestData.DATA_CPU, data).sendToTarget();
 
 					break;
 
@@ -218,10 +242,12 @@ public class TestApplication extends Application {
 					// Message received from the CPU-Monitor Thread
 					// This message implies that the CPU usage has changed
 
-					String error = (String) msg.obj;
+					TestError error = (TestError) msg.obj;
 
+					communicateToDataListeners(TestData.DATA_ERROR, error);
+					
 					// write to log file
-					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_ERROR, error).sendToTarget();
+					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_ERROR, error).sendToTarget();
 
 					break;
 
@@ -229,14 +255,20 @@ public class TestApplication extends Application {
 					// Message received from the CPU-Monitor Thread
 					// This message implies that the CPU usage has changed
 
-					String event = (String) msg.obj;
-
+					TestEvent event = (TestEvent) msg.obj;
+					communicateToDataListeners(TestData.DATA_EVENT, event);
 					// write to log file
-					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_EVENT, event).sendToTarget();
+					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_EVENT, event).sendToTarget();
 
 					int duration = Toast.LENGTH_SHORT;
-					Toast toast = Toast.makeText(m_AppContext, event, duration);
+					Toast toast = Toast.makeText(m_AppContext, event.toString(), duration);
 					toast.show();
+					break;
+					
+				case TestData.DATA_STATISTIC:
+					TestStatistics statistics = (TestStatistics) msg.obj;
+
+					communicateToDataListeners(TestData.DATA_STATISTIC, statistics);
 					break;
 				}
 			}
@@ -272,7 +304,13 @@ public class TestApplication extends Application {
 	}
 	
 	public void registerTestDataListener(Handler h){
-		m_dataListener = h;
+		m_dataListeners.add(h);
+	}
+	
+	private void communicateToDataListeners(int what, Object o){
+		for(Handler h : m_dataListeners){
+			h.obtainMessage(what, o).sendToTarget();
+		}
 	}
 
 }

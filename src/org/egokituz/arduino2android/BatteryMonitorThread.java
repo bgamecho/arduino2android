@@ -19,14 +19,14 @@
  */
 package org.egokituz.arduino2android;
 
+import org.egokituz.arduino2android.models.BatteryData;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
-import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 
 /**
@@ -60,12 +60,15 @@ public class BatteryMonitorThread extends Thread{
 
 				long timestamp = System.currentTimeMillis();
 				
+				BatteryData battery = new BatteryData(timestamp, batteryPct);
+				m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_BATTERY_STATE_CHANGED,battery).sendToTarget();
+				/*
 				Message sendMsg = m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_BATTERY_STATE_CHANGED,batteryPct);
 				Bundle myDataBundle = new Bundle();
 				myDataBundle.putLong("TIMESTAMP", timestamp);
 				sendMsg.setData(myDataBundle);
 				sendMsg.sendToTarget();
-				
+				*/
 				Log.v(TAG, "Battery Changed: "+batteryPct);
 				break;
 			}

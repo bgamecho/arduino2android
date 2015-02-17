@@ -7,17 +7,18 @@ package org.egokituz.arduino2android.models;
  * @author Xabier Gardeazabal
  *
  */
-public class CPUData extends TestData {
+public class StressData extends TestData {
+
+	public String arduinoID;
+	public int msgSize;
 	
-	public Float cpuLoad; 
-	
-	public CPUData() {
-		
-	}
-	
-	public CPUData(long time, Float load ){
+	/**
+	 * 
+	 */
+	public StressData(long time, int size, String id) {
 		timestamp = time;
-		cpuLoad = load*100; // normalize to a percentage range 0-100
+		msgSize = size;
+		arduinoID = id;
 	}
 
 	/* (non-Javadoc)
@@ -25,7 +26,7 @@ public class CPUData extends TestData {
 	 */
 	@Override
 	public String toString() {
-		return timestamp+" "+cpuLoad;
+		return timestamp+" "+arduinoID+" "+msgSize;
 	}
 
 }

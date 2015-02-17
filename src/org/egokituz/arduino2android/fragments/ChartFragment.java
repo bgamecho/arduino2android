@@ -9,6 +9,19 @@ import org.egokituz.arduino2android.R;
 import org.egokituz.arduino2android.TestApplication;
 import org.egokituz.arduino2android.models.BatteryData;
 import org.egokituz.arduino2android.models.CPUData;
+import org.egokituz.arduino2android.models.TestData;
+
+import android.content.Context;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v4.app.Fragment;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.data.Entry;
@@ -17,34 +30,14 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.OnChartValueSelectedListener;
 import com.github.mikephil.charting.utils.ColorTemplate;
 
-import android.content.Context;
-import android.graphics.Color;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Toast;
-
 /**
+ * This fragment shows a line-graph with the values of CPU usage and Battery level
  * @author Xabier Gardeazabal
  *
  */
 public class ChartFragment extends Fragment implements OnChartValueSelectedListener{
 
 	private static final String TAG = "ChartFragment";
-
-	// Handler message types
-	public static final int DATA_BATTERY = 1;
-	public static final int DATA_CPU = 2;
-	public static final int DATA_PING = 3;
-	public static final int DATA_ERROR = 4;
-	public static final int DATA_EVENT = 5;
 
 	// Chart data-set index
 	private static final int DATASET_BATTERY = 0;
@@ -77,25 +70,26 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		public void handleMessage(Message msg) {
 			Entry e;
 			switch (msg.what) {
-			case DATA_BATTERY:
+			case TestData.DATA_BATTERY:
 				BatteryData battery = (BatteryData) msg.obj;
 				e = new Entry(battery.batteryLevel, m_batteryDataSet.getEntryCount());
 				//addEntry(DATASET_BATTERY, e);
 				addEntry2(DATASET_BATTERY, e);
 				break;
-			case DATA_CPU:
+			case TestData.DATA_CPU:
 				CPUData cpu = (CPUData) msg.obj;
 				e = new Entry(cpu.cpuLoad, m_cpuDataSet.getEntryCount());
 				//addEntry(DATASET_CPU, e);
 				addEntry2(DATASET_CPU, e);
+				
 				break;
-			case DATA_PING:
+			case TestData.DATA_PING:
 
 				break;
-			case DATA_ERROR:
+			case TestData.DATA_ERROR:
 
 				break;
-			case DATA_EVENT:
+			case TestData.DATA_EVENT:
 
 				break;
 			default:
@@ -136,7 +130,7 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,	Bundle savedInstanceState) {
 		// Load the layout of this fragment
-		View rootView = inflater.inflate(R.layout.activity_linechart_noseekbar, container, false);
+		View rootView = inflater.inflate(R.layout.fragment_chart, container, false);
 
 		mChart = (LineChart) rootView.findViewById(R.id.chart1);
 

@@ -9,7 +9,6 @@ import java.util.Collections;
 import org.egokituz.arduino2android.R;
 import org.egokituz.arduino2android.TestApplication;
 
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;

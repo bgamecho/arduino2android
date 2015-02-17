@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.egokituz.arduino2android.activities.SettingsActivity;
+import org.egokituz.arduino2android.models.TestEvent;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -308,8 +309,10 @@ public class BTManagerThread extends Thread{
 			String deviceName;
 			String devId;
 			boolean newArduinoAvalable;
-			long timestamp;
+			long timestamp = System.currentTimeMillis();
 			String msg;
+			TestEvent event = new TestEvent();
+			event.timestamp = timestamp;
 
 			switch (action){
 			case BluetoothDevice.ACTION_FOUND:
@@ -348,14 +351,17 @@ public class BTManagerThread extends Thread{
 				break;
 			case BluetoothDevice.ACTION_ACL_CONNECTED:
 				//Low-level (ACL) connection has been established with a remote BT device
-				timestamp = System.currentTimeMillis();
 
 				device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				deviceName = device.getName();				
 
 				// Notify the main activity about the connection:
 				msg = timestamp+" "+deviceName+"-connected";
-				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, msg).sendToTarget();
+				
+
+				event.eventID = TestEvent.EVENT_NEW_DEVICE_CONNECTED;
+				event.source = deviceName;
+				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, event).sendToTarget();
 
 				Log.v(TAG, "connection established with "+deviceName);
 				break;
@@ -375,9 +381,9 @@ public class BTManagerThread extends Thread{
 				Log.v(TAG, "Disconnected "+deviceName);
 
 				// Notify the main activity about the disconnection:
-				timestamp = System.currentTimeMillis();
-				msg = timestamp+" "+deviceName+"-disconnected";
-				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, msg).sendToTarget();
+				event.eventID = TestEvent.EVENT_DEVICE_DISCONNECTED;
+				event.source = deviceName;
+				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, event).sendToTarget();
 
 				finalizeArduinoThread(device.getAddress());
 				devId = deviceName+"-"+device.getAddress();
@@ -388,17 +394,17 @@ public class BTManagerThread extends Thread{
 			case BluetoothAdapter.ACTION_DISCOVERY_STARTED:
 				// When discovery is started, notify the main activity
 				Log.v(TAG, "discovery started");
-				timestamp = System.currentTimeMillis();
-				msg = timestamp+" "+"discovery-started";
-				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, msg).sendToTarget();
+
+				event.eventID = TestEvent.EVENT_NEW_DISCOVERY_STARTED;
+				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, event).sendToTarget();
 				break;
 
 			case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
 				//TODO When discovery is finished
 				Log.v(TAG, "discovery is finished");
-				timestamp = System.currentTimeMillis();
-				msg = timestamp+" "+"discovery-finished";
-				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, msg).sendToTarget();
+				
+				event.eventID = TestEvent.EVENT_NEW_DISCOVERY_STARTED;
+				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, event).sendToTarget();
 
 				if(connectionTiming == DELAYED_CONNECT){
 					_plannerThread.fetchDevices();

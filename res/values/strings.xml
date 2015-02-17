@@ -28,6 +28,29 @@
 	<string name="saveLogs">Save log files</string>
 	
 	
+	<!-- Statistics fragment Strings -->
+	<string name="statistics">Statistics</string>
+	<string name="battery">Battery</string>
+	<string name="meanBattery">Mean</string>
+	<string name="cpu">CPU</string>
+	<string name="meanCPU">Mean</string>
+	<string name="discoveries">Discovery nº</string>
+	<string name="bt_speed">Bluetooth speed (up &amp; down)</string>
+	<string name="total_errors">Errors (total)</string>
+	<string name="total_errorRate">Rate</string>
+	<string name="transferred_data">Transferred data (total)</string>
+	<string name="arduino_speed">Speed</string>
+	<string name="totalMessages">Message nº</string>
+	<string name="arduino_errors">Errors</string>
+	<string name="arduino_transferred">Transferred</string>
+	<string name="mean_ping">Mean Ping</string>
+	
+	<!-- Bluetooth Events -->
+	<string name="event_new_discovery">New discovery started</string>
+	<string name="event_discovery_finished">Discovery finished</string>
+	<string name="event_new_device_found">New device found</string>
+	<string name="event_new_device_connected">New device connected</string>
+	<string name="event_device_disconnected">Device disconnected</string>
 	
 	
 </resources>

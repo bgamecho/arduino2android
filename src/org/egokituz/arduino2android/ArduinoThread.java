@@ -33,6 +33,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.egokituz.arduino2android.models.ArduinoMessage;
+import org.egokituz.arduino2android.models.PingData;
+import org.egokituz.arduino2android.models.StressData;
+import org.egokituz.arduino2android.models.TestData;
+import org.egokituz.arduino2android.models.TestError;
 import org.egokituz.arduino2android.models.exceptions.BadMessageFrameFormat;
 
 import android.bluetooth.BluetoothDevice;
@@ -55,6 +59,8 @@ import android.util.Log;
 public class ArduinoThread extends Thread{
 
 	public final static String TAG ="ArduinoThread";
+	
+	private final int MESSAGE_BUCKET_SIZE =10;
 
 	private boolean m_terminateFlag;
 	private boolean m_connected;
@@ -360,8 +366,11 @@ public class ArduinoThread extends Thread{
 				Log.e(TAG, m_devName+" error rate: % "+ errorRate);
 				
 				// Notify the main activity that a frame was dropped
-				String errorLine = timestamp+" "+m_devName;
-				m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_ERROR_READING, errorLine).sendToTarget();
+				//String errorLine = timestamp+" "+m_devName;
+				TestError error = new TestError();
+				error.timestamp = timestamp;
+				error.source = m_devName;
+				m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_ERROR_READING, error).sendToTarget();
 			} catch (IOException e) {
 				Log.e(TAG, "IOException reading socket for "+m_myBluetoothDevice.getName());
 				//e.printStackTrace();
@@ -390,8 +399,8 @@ public class ArduinoThread extends Thread{
 	}
 
 
-	private ArrayList<String> dataQueue = new ArrayList<String>();
-	private ArrayList<String> pingQueue = new ArrayList<String>();
+	private ArrayList<StressData> dataQueue = new ArrayList<StressData>(MESSAGE_BUCKET_SIZE);
+	private ArrayList<PingData> pingQueue = new ArrayList<PingData>(MESSAGE_BUCKET_SIZE);
 	
 	/**
 	 * Takes both DATA and PING type messages, and stores each of them in an array-list. 
@@ -402,20 +411,23 @@ public class ArduinoThread extends Thread{
 	private void processMessage(ArduinoMessage readMessage, long ping) {
 		int msgType = readMessage.getMessageID();
 		String msg = readMessage.timestamp + " "+this.m_devName+" "+readMessage.size();
-		
+		TestData data;
 		switch (msgType) {
 		case ArduinoMessage.MSGID_PING:
-			msg +=" "+ping;
-			pingQueue.add(msg);
-			if(pingQueue.size()>99){
+			data = new PingData(readMessage.timestamp, readMessage.size(), ping, m_devName);
+			pingQueue.add((PingData) data);
+			
+			if(pingQueue.size()>MESSAGE_BUCKET_SIZE){
 				m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_PING_READ, pingQueue.clone()).sendToTarget();
 				pingQueue.clear();
 			}
 			
 			break;
 		case ArduinoMessage.MSGID_DATA:
-			dataQueue.add(msg);
-			if(dataQueue.size()>99){
+			data = new StressData(readMessage.timestamp, readMessage.size(), m_devName);
+			
+			dataQueue.add((StressData) data);
+			if(dataQueue.size()>MESSAGE_BUCKET_SIZE){
 				m_mainAppHandler.obtainMessage(TestApplication.MESSAGE_DATA_READ, dataQueue.clone()).sendToTarget();
 				dataQueue.clear();
 			}
