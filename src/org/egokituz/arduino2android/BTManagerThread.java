@@ -84,7 +84,7 @@ public class BTManagerThread extends Thread{
 	private int connectionMode = 0;
 	private int connectionTiming = 0;
 
-	private final long discoveryInterval = 30000; // Interval between delayed discoveries (in milliseconds)
+	private long discoveryInterval = 30000; // Interval between delayed discoveries (in milliseconds) Default 30 seconds
 	private long lastDiscoveryTimestamp;
 	
 	private Handler mainHandler;
@@ -285,11 +285,20 @@ public class BTManagerThread extends Thread{
 				break;
 
 			case MESSAGE_SET_SCENARIO:
-				HashMap<String, Integer> test_parameters = (HashMap) msg.obj; // hash-map containing the test parameters defined through the preferences of the app
+				HashMap<String, Integer> test_parameters = (HashMap<String, Integer>) msg.obj; // hash-map containing the test parameters defined through the preferences of the app
 				
-				discoveryPlan = test_parameters.get(SettingsActivity.PREF_DISCOVERY_PLAN);
-				connectionTiming = test_parameters.get(SettingsActivity.PREF_CONNECTION_TIMING);
-				connectionMode = test_parameters.get(SettingsActivity.PREF_CONNECTION_MODE);
+				Integer aux = test_parameters.get(SettingsActivity.PREF_DISCOVERY_PLAN);
+				if(aux != null)
+					discoveryPlan = aux;
+				aux = test_parameters.get(SettingsActivity.PREF_CONNECTION_TIMING);
+				if(aux != null)
+					connectionTiming = aux;
+				aux = test_parameters.get(SettingsActivity.PREF_CONNECTION_MODE);
+				if(aux != null)
+					connectionMode = aux;
+				test_parameters.get(SettingsActivity.PREF_DISCOVERY_INTERVAL);
+				if(aux != null)
+					discoveryInterval = aux;
 			}
 		}
 	};
@@ -454,7 +463,7 @@ public class BTManagerThread extends Thread{
 		switch (discoveryPlan) {
 		case INITIAL_DISCOVERY:
 			// Do nothing, since the initial discovery has already been done
-			Log.v(TAG, "No more discoveries will be done.");
+			//Log.v(TAG, "No more discoveries will be done.");
 			break;
 		case CONTINUOUS_DISCOVERY:
 			// Start a new discovery immediately, unless a conn. timing is not while discovering, and a connection is being done
@@ -521,7 +530,7 @@ public class BTManagerThread extends Thread{
 		for(ArduinoThread th : myArduinoThreads.values()){
 			th.finalizeThread();
 		}
-
+		
 		//mainHandler.removeCallbacksAndMessages (null); 
 
 		Log.v(TAG, "Unregistering receiver");
@@ -534,6 +543,12 @@ public class BTManagerThread extends Thread{
 		Log.v(TAG, "receiver unregistered");
 
 		exit_condition = true;
+		try {
+			_plannerThread.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	private void finalizeArduinoThread(String devId) {
@@ -549,6 +564,7 @@ public class BTManagerThread extends Thread{
 	@Override
 	public synchronized void start() {
 		Log.v(TAG, "BTManager starting...");
+		exit_condition = false;
 		super.start();
 
 	}

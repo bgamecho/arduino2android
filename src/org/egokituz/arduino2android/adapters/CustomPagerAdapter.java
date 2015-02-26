@@ -5,7 +5,6 @@ package org.egokituz.arduino2android.adapters;
 
 import org.egokituz.arduino2android.TestApplication;
 import org.egokituz.arduino2android.fragments.ChartFragment;
-import org.egokituz.arduino2android.fragments.DemoFragment;
 import org.egokituz.arduino2android.fragments.StatisticsFragment;
 import org.egokituz.arduino2android.fragments.TestSectionFragment;
 
@@ -60,19 +59,7 @@ public class CustomPagerAdapter extends FragmentPagerAdapter{
 		case 2:
 			return m_statistics;
 		default:
-	        // Create fragment object
-	        Fragment fragment = new DemoFragment();
-	 
-	        // Attach some data to it that we'll
-	        // use to populate our fragment layouts
-	        Bundle args = new Bundle();
-	        args.putInt("page_position", position + 1);
-	 
-	        // Set the arguments on the fragment
-	        // that will be fetched in DemoFragment@onCreateView
-	        fragment.setArguments(args);
-	 
-	        return fragment;
+	        return null;
 		}
     }
     

@@ -50,6 +50,7 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 	private LineDataSet m_cpuDataSet;
 	private LineDataSet m_batteryDataSet;
 
+	private final int CHART_MAX_X_VALUES = 50;
 
 
 	/**
@@ -73,15 +74,13 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 			case TestData.DATA_BATTERY:
 				BatteryData battery = (BatteryData) msg.obj;
 				e = new Entry(battery.batteryLevel, m_batteryDataSet.getEntryCount());
-				//addEntry(DATASET_BATTERY, e);
-				addEntry2(DATASET_BATTERY, e);
+				addEntryToDataSets(DATASET_BATTERY, e);
 				break;
+				
 			case TestData.DATA_CPU:
 				CPUData cpu = (CPUData) msg.obj;
 				e = new Entry(cpu.cpuLoad, m_cpuDataSet.getEntryCount());
-				//addEntry(DATASET_CPU, e);
-				addEntry2(DATASET_CPU, e);
-				
+				addEntryToDataSets(DATASET_CPU, e);
 				break;
 			case TestData.DATA_PING:
 
@@ -113,7 +112,7 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 	public void setArguments(Context c, TestApplication app) {
 		m_mainContext = c;
 		m_mainApp = app;
-		
+
 		m_mainApp.registerTestDataListener(m_chartHandler);
 	}
 
@@ -121,7 +120,10 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
+		
+		Log.v(TAG, "onCreate() chart fragment");
+		createDataSets();
+		
 		// retain this fragment (so that when the activity's state changes, 
 		// the configuration of this fragment is not lost
 		setRetainInstance(true);
@@ -132,6 +134,8 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		// Load the layout of this fragment
 		View rootView = inflater.inflate(R.layout.fragment_chart, container, false);
 
+		Log.v(TAG, "onCreateView() chart fragment");
+		
 		mChart = (LineChart) rootView.findViewById(R.id.chart1);
 
 		mChart.setOnChartValueSelectedListener(this);
@@ -140,44 +144,20 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		mChart.setDescription("");
 		mChart.setYRange(0, 100, false);
 
-		createDataSets();
 		
-		/*
-		addEmptyData();
+		initChart();
 
-		addEntry();
-		addEntry();
-		addEntry();addEntry();
-		addDataSet();
-		addEntry();
-		addEntry();
-		 */
-		mChart.invalidate();
+		mChart.invalidate(); // invalidates the whole view
 
 		return rootView;
 	}
-
-	private void addEntry(int dsIndex, Entry e) {
-
-		LineData data = mChart.getData();
-
-		if(data != null) {
-
-			LineDataSet set = data.getDataSetByIndex(dsIndex);
-			// set.addEntry(...);
-
-			//data.addEntry(new Entry((float) (Math.random() * 50) + 50f, set.getEntryCount()), 0);
-			data.addEntry(e, dsIndex);
-
-			// let the chart know it's data has changed
-			mChart.notifyDataSetChanged();
-
-			// redraw the chart
-			mChart.invalidate();   
-		}
-	}
-
-	private void addEntry2(int dsIndex, Entry e) {
+	
+	/**
+	 * 
+	 * @param dsIndex
+	 * @param e
+	 */
+	private void addEntryToDataSets(int dsIndex, Entry e) {
 		switch (dsIndex) {
 		case DATASET_BATTERY:
 			m_batteryDataSet.addEntry(e);
@@ -189,7 +169,7 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		default:
 			break;
 		}
-		
+
 		// let the chart know it's data has changed
 		mChart.notifyDataSetChanged();
 
@@ -197,25 +177,37 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		mChart.invalidate();
 	}
 
+	/**
+	 * Creates and initializes the data-sets of the chart
+	 */
 	private void createDataSets() {
 
-		m_cpuDataSet = new LineDataSet(null, "CPU");
-		m_cpuDataSet.setLineWidth(2.5f);
-		m_cpuDataSet.setCircleSize(4.5f);
-		m_cpuDataSet.setColor(Color.rgb(240, 99, 99));
-		m_cpuDataSet.setCircleColor(Color.rgb(240, 99, 99));
-		m_cpuDataSet.setHighLightColor(Color.rgb(190, 190, 190));
-
-		m_batteryDataSet = new LineDataSet(null, "Battery"); 
-		m_batteryDataSet.setCircleSize(4.5f);
-		m_batteryDataSet.setColor(Color.CYAN);
-		m_batteryDataSet.setCircleColor(Color.CYAN);
-		m_batteryDataSet.setHighLightColor(Color.LTGRAY);
+		if(m_cpuDataSet == null){
+			m_cpuDataSet = new LineDataSet(null, "CPU");
+			m_cpuDataSet.setLineWidth(2.5f);
+			m_cpuDataSet.setCircleSize(4.5f);
+			m_cpuDataSet.setColor(Color.rgb(240, 99, 99));
+			m_cpuDataSet.setCircleColor(Color.rgb(240, 99, 99));
+			m_cpuDataSet.setHighLightColor(Color.rgb(190, 190, 190));
+		}
 		
-		// create 30 x-vals
-		String[] xVals = new String[300];
+		if(m_batteryDataSet == null){
+			m_batteryDataSet = new LineDataSet(null, "Battery"); 
+			m_batteryDataSet.setCircleSize(4.5f);
+			m_batteryDataSet.setColor(Color.CYAN);
+			m_batteryDataSet.setCircleColor(Color.CYAN);
+			m_batteryDataSet.setHighLightColor(Color.LTGRAY);
+		}
+	}
 
-		for (int i = 0; i < 300; i++)
+	/**
+	 * Loads the data-sets into the chart
+	 */
+	private void initChart(){
+		// create 30 x-vals
+		String[] xVals = new String[CHART_MAX_X_VALUES];
+
+		for (int i = 0; i < CHART_MAX_X_VALUES; i++)
 			xVals[i] = "" + i;
 
 		// create a chartdata object that contains only the x-axis labels (no entries or datasets)
@@ -224,102 +216,9 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		// Add datasets. WARNING: the order of addition matters!!!
 		data.addDataSet(m_batteryDataSet);
 		data.addDataSet(m_cpuDataSet);
-		
-		mChart.setData(data);
-		mChart.invalidate();
-		
-		
-	}
-
-
-	//----------------------------------------
-
-
-	private void addEmptyData() {
-
-		// create 30 x-vals
-		String[] xVals = new String[30];
-
-		for (int i = 0; i < 30; i++)
-			xVals[i] = "" + i;
-
-		// create a chartdata object that contains only the x-axis labels (no entries or datasets)
-		LineData data = new LineData(xVals);
 
 		mChart.setData(data);
 		mChart.invalidate();
-	}
-
-
-
-
-	int[] mColors = ColorTemplate.VORDIPLOM_COLORS;
-
-	private void addEntry() {
-
-		LineData data = mChart.getData();
-
-		if(data != null) {
-
-			LineDataSet set = data.getDataSetByIndex(0);
-			// set.addEntry(...);
-
-			if (set == null) {
-				set = createSet();
-				data.addDataSet(set);
-			}
-
-			data.addEntry(new Entry((float) (Math.random() * 50) + 50f, set.getEntryCount()), 0);
-
-			// let the chart know it's data has changed
-			mChart.notifyDataSetChanged();
-
-			// redraw the chart
-			mChart.invalidate();   
-		}
-	}
-
-	private void addDataSet() {
-
-		LineData data = mChart.getData();
-
-		if(data != null) {
-
-			int count = (data.getDataSetCount() + 1);
-
-			// create 10 y-vals
-			ArrayList<Entry> yVals = new ArrayList<Entry>();
-
-			for (int i = 0; i < data.getXValCount(); i++)
-				yVals.add(new Entry((float) (Math.random() * 50f) + 50f * count, i));
-
-			LineDataSet set = new LineDataSet(yVals, "DataSet " + count);
-			set.setLineWidth(2.5f);
-			set.setCircleSize(4.5f);
-
-			int color = mColors[count % mColors.length];
-
-			set.setColor(color);
-			set.setCircleColor(color);
-			set.setHighLightColor(color);
-
-			data.addDataSet(set);
-			mChart.notifyDataSetChanged();
-			mChart.invalidate();   
-		}
-	}
-
-	private void removeDataSet() {
-
-		LineData data = mChart.getData();
-
-		if(data != null) {
-
-			data.removeDataSet(data.getDataSetByIndex(data.getDataSetCount() - 1));
-
-			mChart.notifyDataSetChanged();
-			mChart.invalidate();   
-		}
 	}
 
 

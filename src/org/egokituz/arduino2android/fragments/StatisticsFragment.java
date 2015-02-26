@@ -3,6 +3,7 @@
  */
 package org.egokituz.arduino2android.fragments;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 import org.egokituz.arduino2android.R;
@@ -58,6 +59,8 @@ public class StatisticsFragment extends Fragment {
 	private TextView m_meanPing_view;
 	private TextView m_messageCountView;
 	
+	private final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.##");
+	
 
 	/**
 	 * The handler of the StatisticsFragmen
@@ -71,14 +74,14 @@ public class StatisticsFragment extends Fragment {
 			case TestData.DATA_BATTERY:
 				BatteryData battery = (BatteryData) msg.obj;
 				if(m_battery_view != null)
-					m_battery_view.setText(battery.batteryLevel+" %");
+					m_battery_view.setText(DECIMAL_FORMAT.format(battery.batteryLevel)+" %");
 
 				break;
 			case TestData.DATA_CPU:
 				CPUData cpu = (CPUData) msg.obj;
 				
 				if(m_cpu_view != null){
-					m_cpu_view.setText(cpu.cpuLoad+"%");
+					m_cpu_view.setText(DECIMAL_FORMAT.format(cpu.cpuLoad)+" %");
 				}
 				break;
 			case TestData.DATA_PING:
@@ -93,23 +96,35 @@ public class StatisticsFragment extends Fragment {
 			case TestData.DATA_STATISTIC:
 				TestStatistics s = (TestStatistics) msg.obj;
 				if(m_meanBattery_view != null)
-					m_meanBattery_view.setText(s.batteryDrainHour+"");
+					m_meanBattery_view.setText(DECIMAL_FORMAT.format(s.batteryDrainHour)+"");
 				if(m_meanCPU_view != null)
-					m_meanCPU_view.setText(s.meanCPU+"");
+					m_meanCPU_view.setText(DECIMAL_FORMAT.format(s.meanCPU)+"");
 				if(m_discoveries_view != null)
 					m_discoveries_view.setText(s.totalDiscoveries+"");
-				if(m_btSpeed_view != null)
-					m_btSpeed_view.setText(s.btSpeed+" B/s");
+				if(m_btSpeed_view != null){
+					if(s.btSpeed < 1000)
+						m_btSpeed_view.setText(DECIMAL_FORMAT.format(s.btSpeed)+" B/s");
+					else if(s.btSpeed < 1000000)
+						m_btSpeed_view.setText(DECIMAL_FORMAT.format(s.btSpeed/1000.0)+" KB/s");
+					else
+						m_btSpeed_view.setText(DECIMAL_FORMAT.format(s.btSpeed/1000000)+" MB/s");
+				}
 				if(m_errors_view != null)
 					m_errors_view.setText(s.totalErrors+"");
-				if(m_errorRate_view != null && s.totalMessages != 0)
-					m_errorRate_view.setText(((float) s.totalErrors/(float) s.totalMessages)+"");
+				if(m_errorRate_view != null && s.totalMessages != 0){
+					String errors = DECIMAL_FORMAT.format(((float) s.totalErrors/(float) s.totalMessages));
+					m_errorRate_view.setText(errors + " %");
+				}
 				if(m_meanPing_view != null)
-					m_meanPing_view.setTag(s.meanPing);
-				if(m_transfers_view != null)
-					m_transfers_view.setText(s.transferedBytes+"");
-				if(m_meanPing_view != null)
-					m_meanPing_view.setText(s.meanPing+"");
+					m_meanPing_view.setText(DECIMAL_FORMAT.format(s.meanPing)+" ms.");
+				if(m_transfers_view != null){
+					if(s.transferedBytes < 1000)
+						m_transfers_view.setText(s.transferedBytes+" bytes");
+					else if (s.transferedBytes < 1000000)
+						m_transfers_view.setText(DECIMAL_FORMAT.format(s.transferedBytes/1000.0)+" KB");
+					else
+						m_transfers_view.setText(DECIMAL_FORMAT.format(s.transferedBytes/1000000.0)+" MB");
+				}
 				if(m_messageCountView != null)
 					m_messageCountView.setText(s.totalMessages+"");
 				break;

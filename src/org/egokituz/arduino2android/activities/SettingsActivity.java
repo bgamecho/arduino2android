@@ -30,6 +30,8 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 	public static final String PREF_DISCOVERY_PLAN = "pref_discoveryPlan";
 	public static final String PREF_CONNECTION_TIMING = "pref_connectionTiming";
 	public static final String PREF_CONNECTION_MODE = "pref_connectionMode";
+	public static final String PREF_PERFORMANCE_MODE = "pref_performance_mode";
+	public static final String PREF_DISCOVERY_INTERVAL = "pref_discovery_interval";
 
 	@SuppressWarnings("deprecation")
 	@Override

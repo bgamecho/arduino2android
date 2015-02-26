@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- App GUI Strings -->
+    <string name="app_name">Arduino2android</string>
+    
+    <string name="planLabel">Plan Aukerak</string>
+        
+    <string name="discoveryLabel">Aurkikuntza: </string>
+    <string name="initial">Hasierakoa</string>
+    <string name="continuous">Jarraia</string>
+    <string name="periodic">Periodikoa</string>
+    
+    <string name="connectionModeLabel">Konexioa: </string>
+    <string name="progressive">Banaka</string>
+    <string name="alltogether">Denak batera</string>
+    
+    <string name="timingLabel">Conx. momentua: </string>
+    <string name="immediateStop">Berehala (aurk. geldituz)</string>
+    <string name="immediateWhile">Berehala (aurk. bitartean)</string>
+    <string name="delayed">Delayed</string>
+
+	<string name="refreshButton">Zerrenda eguneratu</string>
+	<string name="beginTestButton">Hasi testa</string>
+	
+	<string name="title_activity_preferences">Aukerak</string>
+	<string name="help">Laguntza</string>
+	<string name="saveLogs">Gorde log fitxategiak</string>
+	
+	
+	
+	
+</resources>

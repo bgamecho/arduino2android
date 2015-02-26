@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="helpTitle">About this app</string>
+    <string name="copyright">Copyright (&#169;) 2014 Xabier Gardeazabal</string>
+    <string name="helpAbout">This app is the result of the development under two projects focusing on Android and Bluetooth. 
+        The first one during Spring and Summer 2014, and the second during Winter 2015.
+        </string>
+        <string name="usageGuide">This app is divided in two main sections: 
+            first, the test management part, and secondly, the status monitorization part.
+            \nThe first part focuses on setting the test parameters and when to start a test. 
+            \nThe second one shows live information of the current status for the ongoing test.
+            \nThere are many aspects being monitored during a test, and even as soon as you run this app, 
+            some information is already being monitored and logged into the device\'s file system.
+            \nIn the log files you can find information about the CPU usage, the Battery state, 
+            and all the Bluetooth related test-data per communication channel (ping times, message sizes, etc.)
+            </string>
+</resources>

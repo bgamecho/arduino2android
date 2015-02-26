@@ -13,14 +13,13 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
+        android:name=".TestApplication"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme"
-        android:name="org.egokituz.arduino2android.TestApplication" >
-        
+        android:theme="@style/AppTheme" >
         <activity
-            android:name="org.egokituz.arduino2android.activities.MainActivity"
+            android:name=".activities.MainActivity"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -28,11 +27,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
-        <activity 
-            android:name="org.egokituz.arduino2android.activities.SettingsActivity"
-            android:label="@string/title_activity_preferences" >
-           <!--  android:parentActivi="torg.egokituz.arduino2android.activities.MainActivity" > -->
+        <activity
+            android:name=".activities.SettingsActivity"
+            android:label="@string/title_activity_preferences"
+            android:parentActivityName=".activities.MainActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="org.egokituz.arduino2android.activities.MainActivity" />
+        </activity>
+        <activity
+            android:name="org.egokituz.arduino2android.activities.HelpActivity"
+            android:label="@string/title_activity_help" android:parentActivityName=".activities.MainActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="org.egokituz.arduino2android.activities.MainActivity" />

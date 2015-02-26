@@ -60,7 +60,7 @@ public class ArduinoThread extends Thread{
 
 	public final static String TAG ="ArduinoThread";
 	
-	private final int MESSAGE_BUCKET_SIZE =10;
+	private final int MESSAGE_BUCKET_SIZE =99;
 
 	private boolean m_terminateFlag;
 	private boolean m_connected;
@@ -363,7 +363,7 @@ public class ArduinoThread extends Thread{
 			} catch (BadMessageFrameFormat e){
 				errorCount++;
 				errorRate=(errorCount/(double) msgCount)*100.0;
-				Log.e(TAG, m_devName+" error rate: % "+ errorRate);
+				//Log.e(TAG, m_devName+" error rate: % "+ errorRate);
 				
 				// Notify the main activity that a frame was dropped
 				//String errorLine = timestamp+" "+m_devName;

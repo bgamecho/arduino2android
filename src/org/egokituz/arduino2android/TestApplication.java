@@ -146,6 +146,19 @@ public class TestApplication extends Application {
 		sendMsg.sendToTarget();
 
 		// Begin a new test
+		if(m_BTManager_thread.isAlive()){
+			m_BTManager_thread.finalize();
+			try {
+				m_BTManager_thread.join();
+				m_BTManager_thread = new BTManagerThread(m_AppContext, mainAppHandler);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		m_BTManager_thread.start();
 	}
 	

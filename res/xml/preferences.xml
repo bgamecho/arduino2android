@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+<PreferenceScreen 
+    xmlns:android="http://schemas.android.com/apk/res/android" 
+    xmlns:arduino2android="http://arduino2android.org">
     
     <!-- Global preferences / settings menu -->
 
@@ -50,9 +52,15 @@
 	        android:defaultValue="on"
 	        android:dependency="pref_performanceMode"/>
 	    
- 	    <org.egokituz.arduino2android.preferences.SeekbarPreference
+ 	    <org.egokituz.arduino2android.preferences.SeekBarPreference
 	        android:key="pref_balance"
-        	android:title="@string/pref_discoveryInterval" />
+        	android:title="@string/pref_discoveryInterval" 
+        	android:summary="Adjust reading speed"
+            android:defaultValue="60"
+            android:max="360"
+            arduino2android:min="1"
+            arduino2android:unitsLeft=""
+            arduino2android:unitsRight="secs."/>
 	</PreferenceCategory>
 
 </PreferenceScreen>

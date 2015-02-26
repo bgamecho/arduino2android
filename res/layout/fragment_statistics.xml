@@ -4,112 +4,137 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content" >
 
+    <!-- Row container -->
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
-        android:orientation="vertical" >
+        android:orientation="vertical"
+        android:padding="5dp" >
 
-        <!-- 1) Statistics (battery, cpu, dicovery nº, BT speed, errors, transferred) -->
+        <!-- 1) Statistics Label Row (battery, cpu, dicovery nº, BT speed, errors, transferred) -->
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:text="@string/statistics" />
+            android:text="@string/statistics"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <!-- 2nd row -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="horizontal"
-            android:paddingRight="90dp" >
+            android:paddingRight="0dp" >
 
             <!-- Current battery -->
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
                 android:layout_weight="1"
                 android:text="@string/battery" />
             <TextView
                 android:id="@+id/textView_battery"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:layout_weight="1"
                 android:text="%" />
 
-            <!-- Mean battery -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="left"
-                android:layout_weight="1"
-                android:text="@string/meanBattery" />
-            <TextView
-                android:id="@+id/textView_meanBattery"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="right"
-                android:layout_weight="1"
-                android:text="%/h" />
+
 
         </LinearLayout>
-        
-        
+
+        <!-- 3rd Row -->
+
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+			
+			<!-- Mean battery -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/meanBattery" />
+
+            <TextView
+                android:id="@+id/textView_meanBattery"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="%/h" />
+        </LinearLayout>
+        
+        <!-- 4th row -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:paddingRight="90dp" >
+            android:orientation="horizontal" >
 
             <!-- Current CPU -->
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
                 android:layout_weight="1"
                 android:text="@string/cpu" />
+
             <TextView
                 android:id="@+id/textView_cpu"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:layout_weight="1"
-                android:text="" />
+                android:text="%" />
 
+        </LinearLayout>
+
+        <!-- 5th row -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal" >
+            
             <!-- Mean CPU -->
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="left"
                 android:layout_weight="1"
+                android:layout_gravity="left"
                 android:text="@string/meanCPU" />
             <TextView
                 android:id="@+id/textView_meanCPU"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
+                android:layout_gravity="left"
                 android:layout_height="wrap_content"
-                android:layout_gravity="right"
-                android:layout_weight="1"
-                android:text="" />
+                android:layout_weight="1" />
         </LinearLayout>
 
+        <!-- 6th row -->
+
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:paddingRight="90dp" >
+            android:orientation="horizontal" >
 
             <!-- Total discovery number -->
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
                 android:layout_weight="1"
                 android:text="@string/discoveries" />
             <TextView
                 android:id="@+id/textView_discoveries"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:layout_weight="1"
@@ -118,21 +143,22 @@
         </LinearLayout>
         
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:paddingRight="90dp" >
+            android:orientation="horizontal" >
 
             <!-- Bluetooth Speed -->
+
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
                 android:layout_weight="1"
                 android:text="@string/bt_speed" />
+
             <TextView
                 android:id="@+id/textView_btSpeed"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:layout_weight="1"
@@ -141,59 +167,61 @@
         </LinearLayout>
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:paddingRight="90dp" >
+            android:orientation="horizontal" >
 
             <!-- Total errors -->
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
                 android:layout_weight="1"
                 android:text="@string/total_errors" />
             <TextView
                 android:id="@+id/textView_totalErrors"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:layout_weight="1"
                 android:text="" />
             
             <!-- Total Error rate-->
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" >
+
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="left"
                 android:layout_weight="1"
                 android:text="@string/total_errorRate" />
+
             <TextView
                 android:id="@+id/textView_totalErrorRate"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="right"
-                android:layout_weight="1"
-                android:text="" />
-
+                android:layout_weight="1" />
         </LinearLayout>
         
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:paddingRight="90dp" >
+            android:orientation="horizontal" >
 
             <!-- Total message count -->
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
                 android:layout_weight="1"
                 android:text="@string/totalMessages" />
             <TextView
                 android:id="@+id/textView_totalMessageCount"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:layout_weight="1"
@@ -202,21 +230,20 @@
         </LinearLayout>
         
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:paddingRight="90dp" >
+            android:orientation="horizontal" >
 
             <!-- Total Transferred data -->
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
                 android:layout_weight="1"
                 android:text="@string/transferred_data" />
             <TextView
                 android:id="@+id/textView_transferred"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:layout_weight="1"
@@ -225,21 +252,20 @@
         </LinearLayout>
         
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:paddingRight="90dp" >
+            android:orientation="horizontal" >
 
             <!-- Mean ping time -->
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="left"
                 android:layout_weight="1"
                 android:text="@string/mean_ping" />
             <TextView
                 android:id="@+id/textView_meanPing"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:layout_weight="1"

@@ -3,54 +3,49 @@
 
     <!-- App GUI Strings -->
     <string name="app_name">Arduino2android</string>
-    
     <string name="planLabel">Plan Settings</string>
-        
     <string name="discoveryLabel">Discovery: </string>
     <string name="initial">Initial</string>
     <string name="continuous">Continuous</string>
     <string name="periodic">Periodic</string>
-    
     <string name="connectionModeLabel">Connection: </string>
     <string name="progressive">Progressive</string>
     <string name="alltogether">All together</string>
-    
     <string name="timingLabel">Conn. Timing: </string>
     <string name="immediateStop">Immediate (stop discovery)</string>
     <string name="immediateWhile">Immediate (while discovering)</string>
     <string name="delayed">Delayed</string>
+    <string name="refreshButton">Refresh list</string>
+    <string name="beginTestButton">Begin Test</string>
+    <string name="title_activity_preferences">Settings</string>
+    <string name="help">Help</string>
+    <string name="saveLogs">Save log files</string>
 
-	<string name="refreshButton">Refresh list</string>
-	<string name="beginTestButton">Begin Test</string>
-	
-	<string name="title_activity_preferences">Settings</string>
-	<string name="help">Help</string>
-	<string name="saveLogs">Save log files</string>
-	
-	
-	<!-- Statistics fragment Strings -->
-	<string name="statistics">Statistics</string>
-	<string name="battery">Battery</string>
-	<string name="meanBattery">Mean</string>
-	<string name="cpu">CPU</string>
-	<string name="meanCPU">Mean</string>
-	<string name="discoveries">Discovery nº</string>
-	<string name="bt_speed">Bluetooth speed (up &amp; down)</string>
-	<string name="total_errors">Errors (total)</string>
-	<string name="total_errorRate">Rate</string>
-	<string name="transferred_data">Transferred data (total)</string>
-	<string name="arduino_speed">Speed</string>
-	<string name="totalMessages">Message nº</string>
-	<string name="arduino_errors">Errors</string>
-	<string name="arduino_transferred">Transferred</string>
-	<string name="mean_ping">Mean Ping</string>
-	
-	<!-- Bluetooth Events -->
-	<string name="event_new_discovery">New discovery started</string>
-	<string name="event_discovery_finished">Discovery finished</string>
-	<string name="event_new_device_found">New device found</string>
-	<string name="event_new_device_connected">New device connected</string>
-	<string name="event_device_disconnected">Device disconnected</string>
-	
-	
+    <!-- Statistics fragment Strings -->
+    <string name="statistics">Statistics</string>
+    <string name="battery">Battery</string>
+    <string name="meanBattery">Mean</string>
+    <string name="cpu">CPU</string>
+    <string name="meanCPU">Mean</string>
+    <string name="discoveries">Discovery nº</string>
+    <string name="bt_speed">Bluetooth speed (up &amp; down)</string>
+    <string name="total_errors">Errors (total)</string>
+    <string name="total_errorRate">Rate</string>
+    <string name="transferred_data">Transferred data (total)</string>
+    <string name="arduino_speed">Speed</string>
+    <string name="totalMessages">Message nº</string>
+    <string name="arduino_errors">Errors</string>
+    <string name="arduino_transferred">Transferred</string>
+    <string name="mean_ping">Mean Ping</string>
+
+    <!-- Bluetooth Events -->
+    <string name="event_new_discovery">New discovery started</string>
+    <string name="event_discovery_finished">Discovery finished</string>
+    <string name="event_new_device_found">New device found</string>
+    <string name="event_new_device_connected">New device connected</string>
+    <string name="event_device_disconnected">Device disconnected</string>
+    <string name="title_activity_help">HelpActivity</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+
 </resources>

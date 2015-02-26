@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    
+    <string name="pref_plan_title">Discovery Plan</string>
+    <string name="pref_discoveryPlan">Discovery Plan</string>
+    <string-array name="pref_discoveryPlan_entries">
+        <item>Initial</item>
+        <item>Continuous</item>
+        <item>Periodic</item>
+    </string-array>
+    <string-array name="pref_discoveryPlan_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+    
+    <!-- Discovery plans: initial (1), continuous (2) or periodic (3) -->
+    <string name="pref_discoveryPlan_default">1</string>
+
+
+    <string name="pref_connectionTiming">Connection Timing</string>
+    <string-array name="pref_connectionTiming_entries">
+        <item>Immediate (while discovering)</item>
+        <item>Immediate (strop discovery)</item>
+        <item>Delayed</item>
+    </string-array>
+    <string-array name="pref_connectionTiming_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+    
+    
+    <!-- Connection timing: immediate-while (1), immediate-stop (2) or delayed (3) -->
+    <string name="pref_connectionTiming_default">3</string>
+    
+    
+    <string name="pref_connectionMode">Connection Mode</string>
+    <string-array name="pref_connectionMode_entries">
+        <item>Progressive</item>
+        <item>All together</item>
+    </string-array>
+    <string-array name="pref_connectionMode_values">
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+    
+    <!-- Connection modes: progressive (1) or alltogether (2) -->
+    <string name="pref_connectionMode_default">2</string>
+    
+    
+    <string name="pref_performance_settings">Performance</string>
+    <string name="pref_performanceMode">High performance</string>
+    <string name="pref_performanceMode_summary_ON">Best performance settings</string>
+    <string name="pref_performanceMode_summary_OFF">User defined performance</string>
+
+    <string name="pref_autoRefreshTargetList">Automatic refresh</string>
+    <string name="pref_autoRefreshTargetList_summary_ON">The list will refresh automatically</string>
+    <string name="pref_autoRefreshTargetList_summary_OFF">The list won\'t refresh itself</string>
+    
+    <string name="pref_discoveryInterval">Discovery interval</string>
+    
+</resources>

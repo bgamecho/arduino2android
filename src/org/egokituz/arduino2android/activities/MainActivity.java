@@ -144,15 +144,17 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
+		Intent i;
 		// Handle item selection
 		switch (item.getItemId()) {
 		case R.id.help:
-			//showHelp();
+			i = new Intent(getApplicationContext(), HelpActivity.class);
+			startActivity(i);
 			return true;
 
 		case R.id.preferences:
 			// Call SettingsActivity intent
-			Intent i = new Intent(getApplicationContext(), SettingsActivity.class);
+			i = new Intent(getApplicationContext(), SettingsActivity.class);
 			startActivityForResult(i, SETTINGS_RESULT);
 			return true;
 
