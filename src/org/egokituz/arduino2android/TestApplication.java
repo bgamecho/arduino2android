@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.egokituz.arduino2android.activities.SettingsActivity;
-import org.egokituz.arduino2android.models.ArduinoMessage;
 import org.egokituz.arduino2android.models.BatteryData;
 import org.egokituz.arduino2android.models.CPUData;
 import org.egokituz.arduino2android.models.TestData;
@@ -21,9 +20,17 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.util.Log;
 import android.widget.Toast;
 
 /**
+ * Core class of the app. Manages the creation and start of all the other components or modules
+ * of the app.
+ * <br>
+ * Acts as a central point of control: all the communication between components goes through this class,
+ * much like in the "Listener" pattern. Each component communicates its messages to the main Application, 
+ * and this in turn propagates that message to the other components.
+ * 
  * @author Xabier Gardeazabal
  *
  */
@@ -31,7 +38,7 @@ public class TestApplication extends Application {
 
 	public final static String TAG = "TestApplication"; // Tag to identify this class' messages in the console or LogCat
 
-	
+
 	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	public static final int REQUEST_ENABLE_BT = 1;
 	public static final int MESSAGE_DATA_READ = 2;
@@ -41,8 +48,8 @@ public class TestApplication extends Application {
 	public static final int MESSAGE_ERROR_READING = 7;
 	public static final int MESSAGE_BT_EVENT = 8;
 	public static final int MESSAGE_PREFERENCE_CHANGED = 9;
-	
-	
+
+
 
 	//// Module threads ///////////////////
 	private BTManagerThread m_BTManager_thread;
@@ -50,85 +57,99 @@ public class TestApplication extends Application {
 	private LoggerThread m_Logger_thread;
 	private CPUMonitorThread m_cpuMonitor_thread;
 	public StatisticsThread m_statistics_thread;
-	
+
 	public boolean m_finishApp; // Flag for managing activity termination
 
 	private HashMap<String, Integer> m_testPlanParameters; // Used to store current plan settings
 
 
-	private ArrayList<Handler> m_dataListeners;
+	private ArrayList<Handler> m_dataListeners = new ArrayList<Handler>();;
 
 	private Context m_AppContext;
-	
+
 	@Override
 	public void onCreate() {
 		// TODO Auto-generated method stub
 		super.onCreate();
-		
+
 		m_AppContext = getApplicationContext();
 
 		// set flags
 		m_finishApp = false;
 
-		// set handler
+		// set and start the thread handler 
 		if(!m_handlerThread.isAlive())
 			m_handlerThread.start();
+
+		// Initialize the local handler
 		createHandler();
 
-		// Instantiate modules
+		// Instantiate the different modules required for a test. Note that the modules are not started, only created.
+		m_BatteryMonitor_thread = new BatteryMonitorThread(m_AppContext, mainAppHandler);
+		m_cpuMonitor_thread = new CPUMonitorThread(m_AppContext, mainAppHandler);
+		m_Logger_thread = new LoggerThread(m_AppContext, mainAppHandler);
+		m_statistics_thread = new StatisticsThread(m_AppContext, mainAppHandler);
+
+		// start running the module threads
+		startModuleThreads();
+		
+		// register the data listeners
+		registerTestDataListener(m_Logger_thread.loggerThreadHandler);
+		registerTestDataListener(m_statistics_thread.statisticsThreadHandler);
+	}
+
+	/**
+	 * Starts the module threads if they are not already started
+	 */
+	private void startModuleThreads(){
+		// Start the logger thread
+		if(!m_Logger_thread.isAlive())
+			m_Logger_thread.start();
+
+		//Start the Battery monitoring modules' thread
+		if(!m_BatteryMonitor_thread.isAlive())
+			m_BatteryMonitor_thread.start();
+
+		// Start the CPU monitoring module
+		if(!m_cpuMonitor_thread.isAlive())
+			m_cpuMonitor_thread.start();
+
+		// Start the statistics monitor module
+		if(!m_statistics_thread.isAlive())
+			m_statistics_thread.start();
+
+		// Instantiate the Bluetooth Manager thread
 		try {
 			m_BTManager_thread = new BTManagerThread(m_AppContext, mainAppHandler);
-			//Toast.makeText(m_AppContext, "BT manager started", Toast.LENGTH_SHORT).show();
 		} catch (Exception e) {
 			e.printStackTrace();
 
 			// show a small message shortly (a Toast)
 			Toast.makeText(m_AppContext, "Could not start the BT manager", Toast.LENGTH_SHORT).show();
 		}
-
-		m_BatteryMonitor_thread = new BatteryMonitorThread(m_AppContext, mainAppHandler);
-		m_cpuMonitor_thread = new CPUMonitorThread(m_AppContext, mainAppHandler);
-		m_Logger_thread = new LoggerThread(m_AppContext, mainAppHandler);
-		m_statistics_thread = new StatisticsThread(m_AppContext, mainAppHandler);
-
-		// Start the logger thread
-		if(!m_Logger_thread.isAlive())
-			m_Logger_thread.start();
-
-		//Start the monitoring modules' threads
-		if(!m_BatteryMonitor_thread.isAlive())
-			m_BatteryMonitor_thread.start();
-		if(!m_cpuMonitor_thread.isAlive())
-			m_cpuMonitor_thread.start();
-		if(!m_statistics_thread.isAlive())
-			m_statistics_thread.start();
-		
-		m_dataListeners = new ArrayList<Handler>();
-		registerTestDataListener(m_Logger_thread.loggerThreadHandler);
-		registerTestDataListener(m_statistics_thread.statisticsThreadHandler);
 	}
-	
-	
+
 	@Override
 	protected void finalize() throws Throwable {
-		// TODO Auto-generated method stub
 		super.finalize();
 		
+		Log.v(TAG, "finalize()");
+
 		//Finalize threads
 		if(!m_finishApp){
 			m_BTManager_thread.finalize();
 			m_BatteryMonitor_thread.finalize();
 			m_cpuMonitor_thread.finalize();
 			m_Logger_thread.finalize();
+
 			//Shut down the HandlerThread
 			m_handlerThread.quit();
 		}
 		m_finishApp = true;
 	}
-	
+
 
 	/**
-	 * Method called with the onClick event of the "Begin Test" button.
 	 * <p>Retrieves the current test parapemeters from the app's preferences, 
 	 * notifies the logger to begin its work, sends the test parameters to the
 	 * BluetoothManager module, and finally starts said module.
@@ -140,10 +161,10 @@ public class TestApplication extends Application {
 		// Tell the logger that a new Test has begun  //NOT ANYMORE: a new log folder may be created with the new parameters
 		m_Logger_thread.loggerThreadHandler.obtainMessage(LoggerThread.MESSAGE_NEW_TEST, m_testPlanParameters).sendToTarget();
 
-		//TODO: send the test parameters to the BluetoothManager-thread
+		// send the test parameters to the BluetoothManager-thread
 		// Set the Bluetooth Manager's plan with the selected parameters
 		Message sendMsg;
-		sendMsg = m_BTManager_thread.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,m_testPlanParameters); // TODO change the obj of the message
+		sendMsg = m_BTManager_thread.btHandler.obtainMessage(BTManagerThread.MESSAGE_SET_SCENARIO,m_testPlanParameters);
 		sendMsg.sendToTarget();
 
 		// Begin a new test
@@ -152,37 +173,38 @@ public class TestApplication extends Application {
 			try {
 				m_BTManager_thread.join();
 				m_BTManager_thread = new BTManagerThread(m_AppContext, mainAppHandler);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 		m_BTManager_thread.start();
 	}
-	
+
 
 	/**
-	 * Handler connected with the BTManager Threads: 
+	 * Stops the ongoing test in a safe way
+	 */
+	public void stopTest() {
+		// Stop ongoing test modules 
+		m_BTManager_thread.finalize();
+	}
+
+
+	/**
+	 * Thread container for the handler of this application. <br>
+	 * {@link HandlerThread}: Class for starting a new thread that has a looper. 
+	 * The looper can then be used to create handler classes.
 	 */
 	private HandlerThread m_handlerThread = new HandlerThread("MyHandlerThread");
 	public Handler mainAppHandler;
 
-
-
+	/**
+	 * Creates and initialized the local handler. It also registers it on a HandlerThread's looper.
+	 */
 	private void createHandler(){
 		mainAppHandler = new Handler(m_handlerThread.getLooper()) {
-			String sendMsg;
-			byte[] readBuf;
-			int elapsedMilis;
-			int bytes;
-			String devName, devMAC;
-			long timestamp;
-			long msgCount, errCount;
-			ArduinoMessage msgReading;
 
+			@SuppressWarnings("unchecked")
 			@SuppressLint("NewApi")
 			@Override
 			public void handleMessage(Message msg) {
@@ -193,12 +215,12 @@ public class TestApplication extends Application {
 					// This message implies that 99 well formed PING messages were read by an Arduino Thread
 
 					ArrayList<TestData> pingQueue = (ArrayList<TestData>) msg.obj;
-					
+
 					communicateToDataListeners(TestData.DATA_PING, pingQueue);
-					
+
 					// write to log file
 					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_PING, pingQueue).sendToTarget();
-					
+
 					break;
 
 				case MESSAGE_DATA_READ:
@@ -207,7 +229,7 @@ public class TestApplication extends Application {
 
 					ArrayList<TestData> dataQueue = (ArrayList<TestData>) msg.obj;
 					communicateToDataListeners(TestData.DATA_STRESS, dataQueue);
-					
+
 					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_DATA, dataQueue).sendToTarget();
 					break;
 
@@ -222,8 +244,8 @@ public class TestApplication extends Application {
 					// call the Logger to write the battery load
 					sendMsg = timestamp+" "+batteryLoad;
 					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, sendMsg).sendToTarget();
-					*/
-					
+					 */
+
 					BatteryData battery = (BatteryData) msg.obj;
 					communicateToDataListeners(TestData.DATA_BATTERY, battery);
 					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_WRITE_BATTERY, battery).sendToTarget();
@@ -242,8 +264,8 @@ public class TestApplication extends Application {
 					// call the Logger to write the battery load
 					sendMsg = timestamp+" "+cpu;
 					m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_CPU, sendMsg).sendToTarget();
-					*/
-					
+					 */
+
 					// send data to the ChartFragment 
 					CPUData cpu = (CPUData) msg.obj;
 					communicateToDataListeners(TestData.DATA_CPU, cpu);
@@ -259,7 +281,7 @@ public class TestApplication extends Application {
 					TestError error = (TestError) msg.obj;
 
 					communicateToDataListeners(TestData.DATA_ERROR, error);
-					
+
 					// write to log file
 					//m_Logger_thread.m_logHandler.obtainMessage(LoggerThread.MESSAGE_ERROR, error).sendToTarget();
 
@@ -278,7 +300,7 @@ public class TestApplication extends Application {
 					Toast toast = Toast.makeText(m_AppContext, event.toString(), duration);
 					toast.show();
 					break;
-					
+
 				case TestData.DATA_STATISTIC:
 					TestStatistics statistics = (TestStatistics) msg.obj;
 
@@ -288,7 +310,7 @@ public class TestApplication extends Application {
 			}
 		};
 	}
-	
+
 	/**
 	 * @return the m_BTManager
 	 */
@@ -316,15 +338,23 @@ public class TestApplication extends Application {
 	public CPUMonitorThread getCPUMonitor() {
 		return m_cpuMonitor_thread;
 	}
-	
+
 	public void registerTestDataListener(Handler h){
 		m_dataListeners.add(h);
 	}
-	
+
 	private void communicateToDataListeners(int what, Object o){
 		for(Handler h : m_dataListeners){
 			h.obtainMessage(what, o).sendToTarget();
 		}
 	}
+	
+	public boolean isTestOngoing(){
+		
+		if(m_BTManager_thread != null)
+			return m_BTManager_thread.isAlive();
+		return false;
+	}
+	
 
 }

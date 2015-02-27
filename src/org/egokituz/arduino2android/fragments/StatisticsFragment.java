@@ -27,6 +27,7 @@ import com.github.mikephil.charting.data.Entry;
 
 /**
  * This class shows the live statistics or values that other components of the system are sharing
+ * 
  * @author Xabier Gardeazabal
  *
  */

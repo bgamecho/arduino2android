@@ -1,5 +1,11 @@
 package org.egokituz.arduino2android.models.exceptions;
 
+/**
+ * Custom exception class for incorrect ETX bytes
+ * 
+ * @author Xabier Gardeazabal
+ *
+ */
 public class IncorrectETXbyte extends Exception {
 	private static final long serialVersionUID = 187830150214578031L;
 

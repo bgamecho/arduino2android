@@ -2,6 +2,7 @@ package org.egokituz.arduino2android.preferences;
 
 
 import org.egokituz.arduino2android.R;
+import org.egokituz.arduino2android.activities.SettingsActivity;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -12,11 +13,16 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 
+/**
+ * Custom {@linkplain Preference} for choosing a number with a seek-bar in the {@linkplain SettingsActivity} or preferences.
+ * 
+ * @author Xabier Gardeazabal
+ *
+ */
 public class SeekBarPreference extends Preference implements OnSeekBarChangeListener {
 	
 	private final String TAG = getClass().getName();

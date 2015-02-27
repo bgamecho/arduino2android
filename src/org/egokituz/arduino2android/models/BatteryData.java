@@ -4,6 +4,8 @@
 package org.egokituz.arduino2android.models;
 
 /**
+ * {@linkplain TestData} sub-class for Battery information
+ * 
  * @author Xabier Gardeazabal
  *
  */

@@ -2,7 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="org.egokituz.arduino2android.gui.MainActivity" >
 
-    <!-- Action bar menu -->
+    <!-- Action bar menu options -->
 
     <item
         android:id="@+id/help"
@@ -15,9 +15,9 @@
         android:icon="@android:drawable/ic_menu_preferences"/>
     
     <item 
-        android:id="@+id/logs"
+        android:id="@+id/openLogFolder"
         android:icon="@android:drawable/ic_menu_save"
-        android:title="@string/saveLogs"   />
+        android:title="@string/openLogFolder"  />
     
 	
 </menu>

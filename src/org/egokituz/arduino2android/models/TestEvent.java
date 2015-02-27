@@ -3,9 +3,10 @@
  */
 package org.egokituz.arduino2android.models;
 
-import org.egokituz.arduino2android.R;
 
 /**
+ * {@linkplain TestData} sub-class for information about a specific test (the current one)
+ * 
  * @author Xabier Gardeazabal
  *
  */

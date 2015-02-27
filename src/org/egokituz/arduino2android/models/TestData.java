@@ -6,6 +6,8 @@ package org.egokituz.arduino2android.models;
 import java.util.ArrayList;
 
 /**
+ * General container class for test-related data (eg. battery, cpu, ping, etc.)
+ * 
  * @author Xabier Gardeazabal
  *
  */

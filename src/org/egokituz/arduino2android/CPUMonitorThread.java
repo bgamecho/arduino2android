@@ -29,6 +29,8 @@ import android.os.Handler;
 import android.util.Log;
 
 /**
+ * Manages the calculation of the CPU usage and communicates it to the main {@linkplain Application}
+ * 
  * @author Xabier Gardeazabal
  */
 public class CPUMonitorThread extends Thread{

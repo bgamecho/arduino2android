@@ -4,17 +4,19 @@
 package org.egokituz.arduino2android.adapters;
 
 import org.egokituz.arduino2android.TestApplication;
+import org.egokituz.arduino2android.activities.MainActivity;
 import org.egokituz.arduino2android.fragments.ChartFragment;
 import org.egokituz.arduino2android.fragments.StatisticsFragment;
 import org.egokituz.arduino2android.fragments.TestSectionFragment;
 
 import android.content.Context;
-import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 
 /**
+ * {@link FragmentPagerAdapter} managing the different tab-fragments of the {@link MainActivity}
+ * 
  * @author Xabier Gardeazabal
  *
  */

@@ -21,6 +21,7 @@
 
 package org.egokituz.arduino2android.activities;
 
+import org.egokituz.arduino2android.LoggerThread;
 import org.egokituz.arduino2android.R;
 import org.egokituz.arduino2android.TestApplication;
 import org.egokituz.arduino2android.adapters.CustomPagerAdapter;
@@ -40,6 +41,9 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 
 /**
+ * Activity class containing the main entry-point of the app.
+ * This class handles the tabs and options menu of the app too.
+ * 
  * @author xgardeazabal
  */
 public class MainActivity extends FragmentActivity implements ActionBar.TabListener {
@@ -156,6 +160,13 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 			// Call SettingsActivity intent
 			i = new Intent(getApplicationContext(), SettingsActivity.class);
 			startActivityForResult(i, SETTINGS_RESULT);
+			return true;
+			
+		case R.id.openLogFolder:
+			
+			// Call the static method on the LoggerThread class to open the root directory for the log folders and files
+			LoggerThread.openRootLogFolder(m_ActivityContext);
+			
 			return true;
 
 		default:

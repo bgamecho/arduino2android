@@ -43,6 +43,9 @@ import android.os.Message;
 import android.util.Log;
 
 /**
+ * Module that manages the logging (writing info in text files on the device's internal storage)
+ * of all the test data.
+ * 
  * @author Xabier Gardeazabal
  *
  */
@@ -51,15 +54,17 @@ public class LoggerThread extends Thread{
 	private static final String TAG = "Logger";
 
 	// Handler message types
-//	public static final int MESSAGE_WRITE_DATA = 0;
-//	public static final int MESSAGE_WRITE_BATTERY = 1;
-//	public static final int MESSAGE_CPU = 2;
-//	public static final int MESSAGE_PING = 3;
-//	public static final int MESSAGE_ERROR = 4;
-//	public static final int MESSAGE_EVENT = 5;
+	//	public static final int MESSAGE_WRITE_DATA = 0;
+	//	public static final int MESSAGE_WRITE_BATTERY = 1;
+	//	public static final int MESSAGE_CPU = 2;
+	//	public static final int MESSAGE_PING = 3;
+	//	public static final int MESSAGE_ERROR = 4;
+	//	public static final int MESSAGE_EVENT = 5;
 	public static final int MESSAGE_NEW_TEST = 7;
 	
-	// Filenames
+	// Folder & Filename constants
+	private static final String ROOT_LOG_FOLDER_DIR = "logs";
+	private final String BASE_LOG_FODER_NAME = "log";
 	private final String FILE_PING = "ping.txt";
 	private final String FILE_DATA = "data.txt";
 	private final String FILE_BATTERY = "battery.txt";
@@ -68,12 +73,32 @@ public class LoggerThread extends Thread{
 	private final String FILE_EVENTS = "events.txt";
 	private final String FILE_PARAMETERS = "testParameters.txt";
 
+	/**
+	 * Context of the main {@link Application} of this app 
+	 */
 	private Context m_AppContext;
+	
+	/**
+	 * Handler of the main {@link Application} class
+	 */
 	private Handler m_mainHandler;
 
+	/**
+	 * Control flag for the thread-loop
+	 */
 	private boolean m_exitCondition = false;
 
+	/**
+	 * Control flag to know whether a new log-folder should be created
+	 */
 	private boolean m_testInProcess = false;
+		
+	// Externalize variables for performance
+	private final File m_RootDir = new File(Environment.getExternalStorageDirectory() + File.separator + ROOT_LOG_FOLDER_DIR);
+	private File m_currentLogFolder;
+	private File m_logFile;
+	private BufferedWriter m_buf;
+	private FileWriter m_fw;
 
 	public Handler loggerThreadHandler = new Handler(){
 
@@ -118,9 +143,9 @@ public class LoggerThread extends Thread{
 			case MESSAGE_NEW_TEST:
 				if(m_testInProcess)
 					createNextLogFolder();
-				
+
 				HashMap<String, Integer> preferences = (HashMap<String, Integer>) msg.obj;
-				
+
 				ArrayList<String> parametersQueue = (ArrayList<String>) SettingsActivity.preferenceListToString(preferences);
 				parametersQueue.add(0, getDeviceName());
 				appendLog(FILE_PARAMETERS,parametersQueue);
@@ -131,10 +156,15 @@ public class LoggerThread extends Thread{
 	};
 
 
+	/**
+	 * Constructor
+	 * @param mainCtx The context of the main {@link Application}
+	 * @param mainHandler The handler of the main Application class
+	 */
 	public LoggerThread(Context mainCtx, Handler mainHandler) {
 		super();
 		setName("loggerThread");
-		
+
 		m_AppContext = mainCtx;
 		m_mainHandler = mainHandler;
 
@@ -149,16 +179,16 @@ public class LoggerThread extends Thread{
 	 * Creates a new directory under Root/logs/logX, where X is the next smaller integer available
 	 */
 	private void createNextLogFolder() {
-		String folderName = "log1";
-		m_logFolder = new File(m_RootDir+ File.separator + folderName);
+		String folderName = BASE_LOG_FODER_NAME+"1";
+		m_currentLogFolder = new File(m_RootDir+ File.separator + folderName);
 
 		int i = 1;
-		while(m_logFolder.isDirectory()){
+		while(m_currentLogFolder.isDirectory()){
 			i++;
-			folderName = "log"+i;
-			m_logFolder = new File(m_RootDir + File.separator + folderName);
+			folderName = BASE_LOG_FODER_NAME+i;
+			m_currentLogFolder = new File(m_RootDir + File.separator + folderName);
 		}
-		m_logFolder.mkdir();
+		m_currentLogFolder.mkdir();
 	}
 
 	@Override
@@ -175,18 +205,13 @@ public class LoggerThread extends Thread{
 		}
 	}
 
-	// Externalize variables for performance
-	private final File m_RootDir = new File(Environment.getExternalStorageDirectory() + File.separator + "logs");
-	private File m_logFolder;
-	private File m_logFile;
-	private BufferedWriter m_buf;
-	private FileWriter m_fw;
+
 
 	public void appendLog(String fileName, ArrayList<String> text){
 		//Log.v(TAG, text);
-		if(m_logFolder.canWrite()){
+		if(m_currentLogFolder.canWrite()){
 			//String filePath = mainCtx.getFilesDir().getPath().toString() + "/logXabi.txt";
-			m_logFile = new File(m_logFolder,fileName);
+			m_logFile = new File(m_currentLogFolder,fileName);
 			if (!m_logFile.exists()){
 				try{
 					m_logFile.createNewFile();
@@ -254,6 +279,24 @@ public class LoggerThread extends Thread{
 
 	}
 
+
+	public void openFolder()
+	{
+		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+		Uri uri = Uri.parse(m_currentLogFolder.getPath());
+		intent.setDataAndType(uri, "text");
+		m_AppContext.startActivity(Intent.createChooser(intent, "Open folder"));
+	}
+	
+	public static void openRootLogFolder(Context c)
+	{
+		File root = new File(Environment.getExternalStorageDirectory() + File.separator + ROOT_LOG_FOLDER_DIR);
+		Uri uri = Uri.parse(root.getPath());
+		
+		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+		intent.setDataAndType(uri, "resource/folder");
+		c.startActivity(Intent.createChooser(intent, "Open folder"));
+	}
 
 	/*
 	 	public void writeToFile(String message){

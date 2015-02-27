@@ -25,6 +25,9 @@ import android.preference.PreferenceGroup;
 import android.preference.PreferenceManager;
 
 /**
+ * PreferenceActivity for handling the preference menu/activity
+ * Notifies the main {@linkplain Application} in case there is a change in a relevant preference.
+ * 
  * @author Xabier Gardeazabal
  *
  */

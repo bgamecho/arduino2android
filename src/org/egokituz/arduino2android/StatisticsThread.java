@@ -3,12 +3,8 @@
  */
 package org.egokituz.arduino2android;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
-import java.util.HashMap;
 
-import org.egokituz.arduino2android.activities.SettingsActivity;
 import org.egokituz.arduino2android.models.BatteryData;
 import org.egokituz.arduino2android.models.CPUData;
 import org.egokituz.arduino2android.models.PingData;
@@ -23,6 +19,13 @@ import android.os.Message;
 import android.util.Log;
 
 /**
+ * Gathers all the relevant information about the current situation and
+ * of the current test (if there is an ongoing test currently being held).
+ * 
+ * Then processes the information and summarizes it into some statistics, live.
+ * 
+ *  The current statistics info is communicated to the main {@linkplain Application} periodically
+ * 
  * @author Xabier Gardeazabal
  *
  */
@@ -62,13 +65,9 @@ public class StatisticsThread extends Thread {
 	private int m_connectedDevices = 0;
 	
 	public Handler statisticsThreadHandler = new Handler(){
-
-
 		@SuppressWarnings("unchecked")
 		@Override
 		public void handleMessage(Message msg) {
-			ArrayList<String> textQueue;
-			String text;
 			long currentTime;
 			switch (msg.what) {
 			case TestData.DATA_PING:

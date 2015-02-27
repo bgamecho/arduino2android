@@ -17,8 +17,10 @@
     <string name="delayed">Delayed</string>
     <string name="refreshButton">Refresh list</string>
     <string name="beginTestButton">Begin Test</string>
+    <string name="stopTestButton">Stop Test</string>
     <string name="title_activity_preferences">Settings</string>
     <string name="help">Help</string>
+    <string name="openLogFolder">Open log folder</string>
     <string name="saveLogs">Save log files</string>
 
     <!-- Statistics fragment Strings -->

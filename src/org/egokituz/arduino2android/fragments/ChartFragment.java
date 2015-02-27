@@ -3,7 +3,6 @@
  */
 package org.egokituz.arduino2android.fragments;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.egokituz.arduino2android.R;
@@ -30,10 +29,10 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.interfaces.OnChartValueSelectedListener;
-import com.github.mikephil.charting.utils.ColorTemplate;
 
 /**
  * This fragment shows a line-graph with the values of CPU usage and Battery level
+ * 
  * @author Xabier Gardeazabal
  *
  */
@@ -132,21 +131,21 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,	Bundle savedInstanceState) {
+		Log.v(TAG, "onCreateView() chart fragment");
+		
 		// Load the layout of this fragment
 		View rootView = inflater.inflate(R.layout.fragment_chart, container, false);
 
-		Log.v(TAG, "onCreateView() chart fragment");
+		createDataSets();
 		
 		mChart = (LineChart) rootView.findViewById(R.id.chart1);
-
 		mChart.setOnChartValueSelectedListener(this);
 		mChart.setDrawYValues(false);
 		mChart.setDrawGridBackground(false);
-		mChart.setDescription("");
+		mChart.setDescription("Battery and CPU usage chart");
 		mChart.setYRange(0, 100, false);
+		mChart.setDrawLegend(true);
 
-
-		createDataSets();
 		initChart();
 
 		mChart.invalidate(); // invalidates the whole view
@@ -186,8 +185,8 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 
 		if(m_cpuDataSet == null){
 			m_cpuDataSet = new LineDataSet(null, "CPU");
-			m_cpuDataSet.setLineWidth(2.5f);
-			m_cpuDataSet.setCircleSize(4.5f);
+			m_cpuDataSet.setLineWidth(1.0f);
+			m_cpuDataSet.setCircleSize(2.5f);
 			m_cpuDataSet.setColor(Color.rgb(240, 99, 99));
 			m_cpuDataSet.setCircleColor(Color.rgb(240, 99, 99));
 			m_cpuDataSet.setHighLightColor(Color.rgb(190, 190, 190));
@@ -196,8 +195,8 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		if(m_batteryDataSet == null){
 			m_batteryDataSet = new LineDataSet(null, "Battery"); 
 			m_batteryDataSet.setCircleSize(4.5f);
-			m_batteryDataSet.setColor(Color.CYAN);
-			m_batteryDataSet.setCircleColor(Color.CYAN);
+			m_batteryDataSet.setColor(Color.BLACK);
+			m_batteryDataSet.setCircleColor(Color.BLACK);
 			m_batteryDataSet.setHighLightColor(Color.LTGRAY);
 		}
 	}

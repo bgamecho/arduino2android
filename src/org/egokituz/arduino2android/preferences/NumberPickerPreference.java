@@ -14,6 +14,8 @@ import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 
 /**
+ * Custom {@linkplain DialogPreference} for picking a number
+ * 
  * @author Xabier Gardeazabal
  *
  */

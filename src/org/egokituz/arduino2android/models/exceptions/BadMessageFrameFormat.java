@@ -1,5 +1,11 @@
 package org.egokituz.arduino2android.models.exceptions;
 
+/**
+ * Custom exception class for badly formatted message frames
+ *  
+ * @author Xabier Gardeazabal
+ *
+ */
 public class BadMessageFrameFormat extends Exception {
 	private static final long serialVersionUID = 1033924695297657739L;
 

@@ -42,15 +42,20 @@ import android.os.Message;
 import android.util.Log;
 
 /**
+ * Main module component for testing the Bluetooth capabilities with Arduino.
+ * This Thread-Class manages the creation of all the other modules required to 
+ * perform the tests and gather all the relevant information and store it.
+ * <br>
+ * This class acts as a central control point for each single test.
+ * 
  * @author Xabier Gardeazabal
  */
 public class BTManagerThread extends Thread{
 
 	private static final String TAG = "BTManager";
 
-	//TODO REQUEST_ENABLE_BT is a request code that we provide (It's really just a number that you provide for onActivityResult)
 	protected static final int MESSAGE_ERROR_CREATING_BT_THREAD = 0;
-	
+
 	public static final int MESSAGE_BT_THREAD_CREATED = 2;
 	public static final int MESSAGE_SEND_COMMAND = 3;
 	public static final int MESSAGE_CONNECTION_LOST = 4;
@@ -86,7 +91,7 @@ public class BTManagerThread extends Thread{
 
 	private long discoveryInterval = 30000; // Interval between delayed discoveries (in milliseconds) Default 30 seconds
 	private long lastDiscoveryTimestamp;
-	
+
 	private Handler mainHandler;
 	private Context mainCtx;
 
@@ -143,10 +148,10 @@ public class BTManagerThread extends Thread{
 		connectableArduinos = new HashMap<String,BluetoothDevice>();
 		ignoredDevicesList = new HashMap<String,BluetoothDevice>();
 		waitingToBeConnected = new HashMap<String,BluetoothDevice>();
-		
+
 		// Get the Bluetooth adapter of this device
 		_BluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-		
+
 		// Check if this device supports Bluetooth
 		if (_BluetoothAdapter == null) {
 			// TODO Device does not support Bluetooth
@@ -194,7 +199,7 @@ public class BTManagerThread extends Thread{
 			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
 			enableBtIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 			mainCtx.startActivity(enableBtIntent); // Start a new activity to turn Bluetooth ON
-			
+
 			//((Activity) mainCtx).startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
 			//TODO implement onActivityResult in main Activity
 		}
@@ -229,7 +234,7 @@ public class BTManagerThread extends Thread{
 				if(connectionMode == PROGRESSIVE_CONNECT && connectableArduinos.size()>0){
 					_plannerThread.connectAvalaiableArduinos();
 				}
-				
+
 				if(waitingToBeConnected.size()==0)
 					startDiscoveryIfPossible();
 
@@ -251,7 +256,7 @@ public class BTManagerThread extends Thread{
 				if(connectionMode == PROGRESSIVE_CONNECT && connectableArduinos.size()>0){
 					_plannerThread.connectAvalaiableArduinos();
 				}
-				
+
 				if(waitingToBeConnected.size()==0)
 					startDiscoveryIfPossible();
 
@@ -286,7 +291,7 @@ public class BTManagerThread extends Thread{
 
 			case MESSAGE_SET_SCENARIO:
 				HashMap<String, Integer> test_parameters = (HashMap<String, Integer>) msg.obj; // hash-map containing the test parameters defined through the preferences of the app
-				
+
 				Integer aux = test_parameters.get(SettingsActivity.PREF_DISCOVERY_PLAN);
 				if(aux != null)
 					discoveryPlan = aux;
@@ -366,7 +371,7 @@ public class BTManagerThread extends Thread{
 
 				// Notify the main activity about the connection:
 				msg = timestamp+" "+deviceName+"-connected";
-				
+
 
 				event.eventID = TestEvent.EVENT_NEW_DEVICE_CONNECTED;
 				event.source = deviceName;
@@ -409,9 +414,9 @@ public class BTManagerThread extends Thread{
 				break;
 
 			case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
-				//TODO When discovery is finished
+				// When discovery is finished
 				Log.v(TAG, "discovery is finished");
-				
+
 				event.eventID = TestEvent.EVENT_NEW_DISCOVERY_STARTED;
 				mainHandler.obtainMessage(TestApplication.MESSAGE_BT_EVENT, event).sendToTarget();
 
@@ -457,7 +462,7 @@ public class BTManagerThread extends Thread{
 
 	}; // new() myReceiver 
 
-	
+
 	private void startDiscoveryIfPossible() {
 
 		switch (discoveryPlan) {
@@ -524,29 +529,27 @@ public class BTManagerThread extends Thread{
 	 */
 	public void finalize(){
 		Log.v(TAG, "finalize()");
-		//TODO poner a null receivers
 
 		//Finalize Arduino threads
 		for(ArduinoThread th : myArduinoThreads.values()){
 			th.finalizeThread();
 		}
-		
+
 		//mainHandler.removeCallbacksAndMessages (null); 
 
 		Log.v(TAG, "Unregistering receiver");
 		try {
 			mainCtx.unregisterReceiver(myReceiver);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		Log.v(TAG, "receiver unregistered");
 
 		exit_condition = true;
 		try {
-			_plannerThread.join();
+			if(_plannerThread != null)
+				_plannerThread.join();
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -659,7 +662,7 @@ public class BTManagerThread extends Thread{
 			lastDiscoveryTimestamp = System.currentTimeMillis();
 
 			long now = lastDiscoveryTimestamp;
-			
+
 			// Loop to prevent the thread from finalizing and not answering to calls
 			while (!exit_condition){
 				try {

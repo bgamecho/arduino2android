@@ -1,9 +1,6 @@
 package org.egokituz.arduino2android.activities;
 
 import org.egokituz.arduino2android.R;
-import org.egokituz.arduino2android.R.id;
-import org.egokituz.arduino2android.R.layout;
-import org.egokituz.arduino2android.R.menu;
 
 import android.app.Activity;
 import android.content.Context;
@@ -15,8 +12,6 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -25,6 +20,12 @@ import android.widget.BaseAdapter;
 import android.widget.Gallery;
 import android.widget.ImageView;
 
+/**
+ * Activity showing some general information about this app.
+ * 
+ * @author Xabier Gardeazabal
+ *
+ */
 public class HelpActivity extends Activity {
 
 	//variable for selection intent
