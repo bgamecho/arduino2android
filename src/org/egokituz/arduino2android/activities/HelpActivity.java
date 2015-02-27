@@ -142,7 +142,7 @@ public class HelpActivity extends Activity {
 			imageBitmaps[1] = BitmapFactory.decodeResource(getResources(), R.drawable.data_flow_diagram);
 			imageBitmaps[2] = BitmapFactory.decodeResource(getResources(), R.drawable.bluetoothv3);
 			imageBitmaps[3] = BitmapFactory.decodeResource(getResources(), R.drawable.arduino_uno_wiring);
-			imageBitmaps[4] = BitmapFactory.decodeResource(getResources(), R.drawable.arduino_uno_buffer_wiring);
+			imageBitmaps[4] = BitmapFactory.decodeResource(getResources(), R.drawable.arduino_mega_wiring);
 
 			//set placeholder as all thumbnail images in the gallery initially
 			//for(int i=0; i<imageBitmaps.length; i++)

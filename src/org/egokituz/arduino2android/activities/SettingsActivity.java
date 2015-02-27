@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.egokituz.arduino2android.BTManagerThread;
 import org.egokituz.arduino2android.R;
+import org.egokituz.arduino2android.TestApplication;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -35,16 +36,22 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 	public static final String PREF_CONNECTION_MODE = "pref_connectionMode";
 	public static final String PREF_PERFORMANCE_MODE = "pref_performance_mode";
 	public static final String PREF_DISCOVERY_INTERVAL = "pref_discovery_interval";
+	public static final String PREF_CHART_X_VALUES = "pref_chart_x_values";
+	
+	private TestApplication m_mainApp;
 
 	@SuppressWarnings("deprecation")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		// TODO Auto-generated method stub
 		super.onCreate(savedInstanceState);
+		
+		m_mainApp = (TestApplication)getApplication();	   
+		
 		addPreferencesFromResource(R.xml.preferences);
 		PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
 
-        initSummary(getPreferenceScreen());
+		initSummary(getPreferenceScreen());
 	}
 
 	@Override
@@ -66,24 +73,19 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 	@Override
 	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
 
-
+		// update the summary of the changed preference
 		updatePrefSummary(findPreference(key));
-
-		//TODO: set summary for the preferences
-		Preference pref = findPreference(key);
-		//		if (pref instanceof ListPreference) {
-		//			ListPreference listPref = (ListPreference) pref;
-		//			pref.setSummary(listPref.getEntry());
-		//		}
-
-		/*
-		if (key.equals(PREF_DISCOVERY_PLAN)) {
-			Preference connectionPref = findPreference(key);
-			// Set summary to be the user-description for the selected value
-			connectionPref.setSummary(sharedPreferences.getString(key, ""));
-		}*/
+		
+		if (key.equals(PREF_CHART_X_VALUES)) {
+			int x = sharedPreferences.getInt(key, 100);
+			m_mainApp.mainAppHandler.obtainMessage(TestApplication.MESSAGE_PREFERENCE_CHANGED, key);
+		}
 	}
 
+	/**
+	 * General method to initialize the summary of a preference with its current value
+	 * @param p
+	 */
 	private void initSummary(Preference p) {
 		if (p instanceof PreferenceGroup) {
 			PreferenceGroup pGrp = (PreferenceGroup) p;
@@ -95,19 +97,14 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 		}
 	}
 
+	/**
+	 * General method to update the summary of a preference with its current value
+	 * @param p
+	 */
 	private void updatePrefSummary(Preference p) {
 		if (p instanceof ListPreference) {
 			ListPreference listPref = (ListPreference) p;
 			p.setSummary(listPref.getEntry());
-		}
-		if (p instanceof EditTextPreference) {
-			EditTextPreference editTextPref = (EditTextPreference) p;
-			if (p.getTitle().toString().contains("assword"))
-			{
-				p.setSummary("******");
-			} else {
-				p.setSummary(editTextPref.getText());
-			}
 		}
 		if (p instanceof MultiSelectListPreference) {
 			EditTextPreference editTextPref = (EditTextPreference) p;
@@ -115,7 +112,15 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 		}
 	}
 
+
+
+	/**
+	 * Returns the current global preferences of the app. Each preference is identified by its resource ID
+	 * @param context
+	 * @return Map<String, Integer> containing the current preferences 
+	 */
 	public static Map<String, Integer> getCurrentPreferences(Context context){
+
 		HashMap<String, Integer> preferenceMap = new HashMap<>();
 
 		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
@@ -123,7 +128,6 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 		int value;
 
 		key = SettingsActivity.PREF_DISCOVERY_PLAN;
-		//default_val = context.getResources().getInteger(R.string.pref_discoveryPlan_default);
 		default_val = context.getResources().getString(R.string.pref_discoveryPlan_default);
 		value = Integer.parseInt(sharedPref.getString(key, default_val));
 		preferenceMap.put(key, value);
@@ -138,16 +142,32 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 		value = Integer.parseInt(sharedPref.getString(key, default_val));
 		preferenceMap.put(key, value);
 
+		key = PREF_DISCOVERY_INTERVAL;
+		default_val = context.getResources().getString(R.string.pref_discoveryInterval_default);
+		value = Integer.parseInt(sharedPref.getString(key, default_val));
+		preferenceMap.put(key, value);
+
+		key = PREF_CHART_X_VALUES;
+		default_val = context.getResources().getString(R.string.pref_chart_x_values_default);
+		value = sharedPref.getInt(key, Integer.parseInt(default_val));
+		preferenceMap.put(key, value);
+
 		return preferenceMap;
 	}
 
 
-	public static List<String> preferenceListToString(HashMap<String, Integer> _hm){
+	/**
+	 * Given a Map<String, Integer> of preferences, it returns a list of strings that 
+	 * correspond to the logical values of the preferences
+	 * @param preferenceMap
+	 * @return List<String> with the readable meaning of each preference
+	 */
+	public static List<String> preferenceListToString(HashMap<String,Integer> preferenceMap){
 		ArrayList<String> result = new ArrayList<String>();
 
 		int value = -1;
-		for(String key : _hm.keySet()){
-			value = _hm.get(key);
+		for(String key : preferenceMap.keySet()){
+			value = preferenceMap.get(key);
 			switch (key) {
 			case PREF_DISCOVERY_PLAN:
 
@@ -167,7 +187,7 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 				break;
 
 			case PREF_CONNECTION_TIMING:
-				value = _hm.get(key);
+				value = preferenceMap.get(key);
 				switch (value) {
 				case  BTManagerThread.PROGRESSIVE_CONNECT:
 					result.add("PROGRESSIVE_CONNECT");

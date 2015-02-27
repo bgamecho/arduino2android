@@ -58,7 +58,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	 * The {@link Application} for centralized data management and test control
 	 */
 	public TestApplication m_mainApp;
-	
+
 	/**
 	 * The {@link android.support.v4.view.PagerAdapter} that will provide fragments for each of the
 	 * three primary sections of the app. We use a {@link android.support.v4.app.FragmentPagerAdapter}
@@ -71,7 +71,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	 * The {@link ViewPager} that will display the three primary sections of the app, one at a time.
 	 */
 	ViewPager mViewPager;
-	
+
 	/**
 	 * Holder of the main tab/fragmen/section
 	 */
@@ -81,15 +81,15 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		m_ActivityContext = this;
-	    m_mainApp = (TestApplication)getApplication();	    
-	    
+		m_mainApp = (TestApplication)getApplication();
+
 		setContentView(R.layout.activity_main);
-		
+
 		// Create the adapter that will return a fragment for each of the three primary sections
 		// of the app.
-        m_CustomPagerAdapter = new CustomPagerAdapter(getSupportFragmentManager(), m_ActivityContext, m_mainApp);
-        
-        /*
+		m_CustomPagerAdapter = new CustomPagerAdapter(getSupportFragmentManager(), m_ActivityContext, m_mainApp);
+
+		/*
         // find the retained fragment on activity restarts
         m_TestFragment = (TestSectionFragment) m_CustomPagerAdapter.getItem(0);
 
@@ -98,21 +98,21 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
         	m_TestFragment.setArguments(m_ActivityContext, m_mainApp);
         	m_CustomPagerAdapter.addItem(m_TestFragment, 0);
         }*/
- 
+
 		// Set up the action bar.
 		final ActionBar actionBar = getActionBar();
-		
+
 		// Specify that the Home/Up button should not be enabled, since there is no hierarchical
 		// parent.
 		//actionBar.setHomeButtonEnabled(false);
-		
+
 		// Specify that we will be displaying tabs in the action bar.
 		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
-		
+
 		// Set up the ViewPager, attaching the adapter and setting up a listener for when the
 		// user swipes between sections.
-        mViewPager = (ViewPager) findViewById(R.id.pager);
-        mViewPager.setAdapter(m_CustomPagerAdapter);
+		mViewPager = (ViewPager) findViewById(R.id.pager);
+		mViewPager.setAdapter(m_CustomPagerAdapter);
 		mViewPager.setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
 			@Override
 			public void onPageSelected(int position) {
@@ -208,9 +208,9 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 		super.finish();
 	}
 
-	
 
-	 
+
+
 
 
 
@@ -243,13 +243,13 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 	@Override
 	public void onTabUnselected(Tab tab, FragmentTransaction ft) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void onTabReselected(Tab tab, FragmentTransaction ft) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 

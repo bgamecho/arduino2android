@@ -19,8 +19,8 @@ import android.widget.NumberPicker;
  */
 public class NumberPickerPreference extends DialogPreference{
 
-	private static final int MIN_VALUE = 0;
-	private static final int MAX_VALUE = 100;
+	private static final int MIN_VALUE = 10;
+	private static final int MAX_VALUE = 500;
 	private static final boolean WRAP_SELECTOR_WHEEL = false;
 	private int mSelectedValue;
 	private final int mMinValue;
@@ -38,8 +38,8 @@ public class NumberPickerPreference extends DialogPreference{
 //		a.recycle();
 		
 		mMinValue = 0;
-		mMaxValue = 100;
-		mWrapSelectorWheel = false;
+		mMaxValue = 500;
+		mWrapSelectorWheel = true;
 		
 
 		

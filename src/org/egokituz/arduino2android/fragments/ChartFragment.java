@@ -4,9 +4,11 @@
 package org.egokituz.arduino2android.fragments;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.egokituz.arduino2android.R;
 import org.egokituz.arduino2android.TestApplication;
+import org.egokituz.arduino2android.activities.SettingsActivity;
 import org.egokituz.arduino2android.models.BatteryData;
 import org.egokituz.arduino2android.models.CPUData;
 import org.egokituz.arduino2android.models.TestData;
@@ -50,7 +52,7 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 	private LineDataSet m_cpuDataSet;
 	private LineDataSet m_batteryDataSet;
 
-	private final int CHART_MAX_X_VALUES = 50;
+	private int max_x_values = 50;
 
 
 	/**
@@ -122,7 +124,6 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		super.onCreate(savedInstanceState);
 		
 		Log.v(TAG, "onCreate() chart fragment");
-		createDataSets();
 		
 		// retain this fragment (so that when the activity's state changes, 
 		// the configuration of this fragment is not lost
@@ -144,7 +145,8 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		mChart.setDescription("");
 		mChart.setYRange(0, 100, false);
 
-		
+
+		createDataSets();
 		initChart();
 
 		mChart.invalidate(); // invalidates the whole view
@@ -204,10 +206,14 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 	 * Loads the data-sets into the chart
 	 */
 	private void initChart(){
+		// Retrieve the test parameters from the app's settings/preferences
+		HashMap<String, Integer> m_testPlanParameters = (HashMap<String, Integer>) SettingsActivity.getCurrentPreferences(m_mainContext);
+		max_x_values = m_testPlanParameters.get(SettingsActivity.PREF_CHART_X_VALUES);
+		
 		// create 30 x-vals
-		String[] xVals = new String[CHART_MAX_X_VALUES];
+		String[] xVals = new String[max_x_values];
 
-		for (int i = 0; i < CHART_MAX_X_VALUES; i++)
+		for (int i = 0; i < max_x_values; i++)
 			xVals[i] = "" + i;
 
 		// create a chartdata object that contains only the x-axis labels (no entries or datasets)
@@ -245,7 +251,11 @@ public class ChartFragment extends Fragment implements OnChartValueSelectedListe
 		return set;
 	}
 
-
+	
+	public void setMaxXAxisValues(int x){
+		max_x_values = x;
+		initChart();
+	}
 
 
 

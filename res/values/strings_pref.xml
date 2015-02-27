@@ -59,5 +59,11 @@
     <string name="pref_autoRefreshTargetList_summary_OFF">The list won\'t refresh itself</string>
     
     <string name="pref_discoveryInterval">Discovery interval</string>
+    <string name="pref_discoveryInterval_default">30</string>
+    
+    <string name="pref_chart_settings">Plotting</string>
+    <string name="pref_chart_x_values">X-axis entries</string>
+    
+    <string name="pref_chart_x_values_default">100</string>
     
 </resources>

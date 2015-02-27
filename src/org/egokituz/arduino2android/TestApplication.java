@@ -40,6 +40,7 @@ public class TestApplication extends Application {
 	public static final int MESSAGE_PING_READ = 6;
 	public static final int MESSAGE_ERROR_READING = 7;
 	public static final int MESSAGE_BT_EVENT = 8;
+	public static final int MESSAGE_PREFERENCE_CHANGED = 9;
 	
 	
 

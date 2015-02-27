@@ -8,7 +8,8 @@
     <!-- Test plan settings (discovery plan, connection timing and connection mode) -->
     <PreferenceCategory 
         android:key="pref_key_plan_settings"
-        android:title="@string/pref_plan_title">
+        android:title="@string/pref_plan_title"
+        android:summary="Changes will take place on the next test">
         <ListPreference 
             android:key="pref_discoveryPlan"
             android:title="@string/pref_discoveryPlan"
@@ -53,14 +54,26 @@
 	        android:dependency="pref_performanceMode"/>
 	    
  	    <org.egokituz.arduino2android.preferences.SeekBarPreference
-	        android:key="pref_balance"
+	        android:key="pref_discoveryInterval"
         	android:title="@string/pref_discoveryInterval" 
-        	android:summary="Adjust reading speed"
+        	android:summary="Adjust discovery frequency"
             android:defaultValue="60"
             android:max="360"
             arduino2android:min="1"
             arduino2android:unitsLeft=""
             arduino2android:unitsRight="secs."/>
 	</PreferenceCategory>
+	
+    <PreferenceCategory 
+        android:key="pref_chart_settings"
+        android:title="@string/pref_chart_settings">
+        
+        <org.egokituz.arduino2android.preferences.NumberPickerPreference
+            android:key="pref_chart_x_values"
+            android:title="@string/pref_chart_x_values"/>
+            
+        
+        
+    </PreferenceCategory>
 
 </PreferenceScreen>
